@@ -2,4 +2,5 @@ build
 a.out
 *.a
 *.o
+*.so
 .obj
