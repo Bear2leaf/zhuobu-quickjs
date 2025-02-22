@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+        "strict": true,
+        "checkJs": true,
+        "paths": {
+            "context.so": ["./libs/context.js"]
+        }
+    }
+}

@@ -1,8 +1,7 @@
-
+simple cross-platform build script for my dummy game.
 ```shell
-gcc -o fib.so -shared fib.c -L./quickjs -lquickjs -DJS_SHARED_LIBRARY -I./glfw-3.4/include -I./glfw-3.4/deps -L./glfw-3.4/build/src -lglfw3 -framework Cocoa -framework OpenGL -framework IOKit
 
-cd quickjs/examples
+git submodule update --init --recursive
 
-../qjs test_fib.js
+sh compile.sh && qjs main.js
 ```

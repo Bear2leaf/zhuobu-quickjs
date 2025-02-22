@@ -4,3 +4,4 @@ a.out
 *.o
 *.so
 .obj
+project.private.config.json
