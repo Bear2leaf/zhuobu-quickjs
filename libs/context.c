@@ -51,15 +51,8 @@
 
 /* Prototypes */
 void init( void );
-void display( void );
 void reshape( GLFWwindow* window, int w, int h );
 void key_callback( GLFWwindow* window, int key, int scancode, int action, int mods );
-void mouse_button_callback( GLFWwindow* window, int button, int action, int mods );
-void cursor_position_callback( GLFWwindow* window, double x, double y );
-void DrawBoingBall( void );
-void BounceBall( double dt );
-void DrawBoingBallBand( GLfloat long_lo, GLfloat long_hi );
-void DrawGrid( void );
 
 #define RADIUS           70.f
 #define STEP_LONGITUDE   22.5f                   /* 22.5 makes 8 bands like original Boing */
@@ -177,67 +170,32 @@ void CrossProduct( vertex_t a, vertex_t b, vertex_t c, vertex_t *n )
 #define BOING_DEBUG 0
 
 
-/*****************************************************************************
- * init()
- *****************************************************************************/
-void init( void )
-{
-   /*
-    * Clear background.
-    */
-   glClearColor( 0.55f, 0.55f, 0.55f, 0.f );
-
-   glShadeModel( GL_FLAT );
-}
-
-
-/*****************************************************************************
- * display()
- *****************************************************************************/
-void display(void)
-{
-   glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-   glPushMatrix();
-
-   drawBallHow = DRAW_BALL_SHADOW;
-   DrawBoingBall();
-
-   DrawGrid();
-
-   drawBallHow = DRAW_BALL;
-   DrawBoingBall();
-
-   glPopMatrix();
-   glFlush();
-}
-
 
 /*****************************************************************************
  * reshape()
  *****************************************************************************/
-void reshape( GLFWwindow* window, int w, int h )
-{
-   mat4x4 projection, view;
-
-   glViewport( 0, 0, (GLsizei)w, (GLsizei)h );
-
-   glMatrixMode( GL_PROJECTION );
-   mat4x4_perspective( projection,
-                       2.f * (float) atan2( RADIUS, 200.f ),
-                       (float)w / (float)h,
-                       1.f, VIEW_SCENE_DIST );
-   glLoadMatrixf((const GLfloat*) projection);
-
-   glMatrixMode( GL_MODELVIEW );
-   {
-      vec3 eye = { 0.f, 0.f, VIEW_SCENE_DIST };
-      vec3 center = { 0.f, 0.f, 0.f };
-      vec3 up = { 0.f, -1.f, 0.f };
-      mat4x4_look_at( view, eye, center, up );
-   }
-   glLoadMatrixf((const GLfloat*) view);
-}
-
+ void reshape( GLFWwindow* window, int w, int h )
+ {
+    mat4x4 projection, view;
+ 
+    glViewport( 0, 0, (GLsizei)w, (GLsizei)h );
+ 
+    glMatrixMode( GL_PROJECTION );
+    mat4x4_perspective( projection,
+                        2.f * (float) atan2( RADIUS, 200.f ),
+                        (float)w / (float)h,
+                        1.f, VIEW_SCENE_DIST );
+    glLoadMatrixf((const GLfloat*) projection);
+ 
+    glMatrixMode( GL_MODELVIEW );
+    {
+       vec3 eye = { 0.f, 0.f, VIEW_SCENE_DIST };
+       vec3 center = { 0.f, 0.f, 0.f };
+       vec3 up = { 0.f, -1.f, 0.f };
+       mat4x4_look_at( view, eye, center, up );
+    }
+    glLoadMatrixf((const GLfloat*) view);
+ }
 void key_callback( GLFWwindow* window, int key, int scancode, int action, int mods )
 {
     if (action != GLFW_PRESS)
@@ -268,354 +226,6 @@ void key_callback( GLFWwindow* window, int key, int scancode, int action, int mo
     }
 }
 
-static void set_ball_pos ( GLfloat x, GLfloat y )
-{
-   ball_x = (width / 2) - x;
-   ball_y = y - (height / 2);
-}
-
-void mouse_button_callback( GLFWwindow* window, int button, int action, int mods )
-{
-   if (button != GLFW_MOUSE_BUTTON_LEFT)
-      return;
-
-   if (action == GLFW_PRESS)
-   {
-      override_pos = GLFW_TRUE;
-      set_ball_pos(cursor_x, cursor_y);
-   }
-   else
-   {
-      override_pos = GLFW_FALSE;
-   }
-}
-
-void cursor_position_callback( GLFWwindow* window, double x, double y )
-{
-   cursor_x = (float) x;
-   cursor_y = (float) y;
-
-   if ( override_pos )
-      set_ball_pos(cursor_x, cursor_y);
-}
-
-/*****************************************************************************
- * Draw the Boing ball.
- *
- * The Boing ball is sphere in which each facet is a rectangle.
- * Facet colors alternate between red and white.
- * The ball is built by stacking latitudinal circles.  Each circle is composed
- * of a widely-separated set of points, so that each facet is noticeably large.
- *****************************************************************************/
-void DrawBoingBall( void )
-{
-   GLfloat lon_deg;     /* degree of longitude */
-   double dt_total, dt2;
-
-   glPushMatrix();
-   glMatrixMode( GL_MODELVIEW );
-
-  /*
-   * Another relative Z translation to separate objects.
-   */
-   glTranslatef( 0.0, 0.0, DIST_BALL );
-
-   /* Update ball position and rotation (iterate if necessary) */
-   dt_total = dt;
-   while( dt_total > 0.0 )
-   {
-       dt2 = dt_total > MAX_DELTA_T ? MAX_DELTA_T : dt_total;
-       dt_total -= dt2;
-       BounceBall( dt2 );
-       deg_rot_y = TruncateDeg( deg_rot_y + deg_rot_y_inc*((float)dt2*ANIMATION_SPEED) );
-   }
-
-   /* Set ball position */
-   glTranslatef( ball_x, ball_y, 0.0 );
-
-  /*
-   * Offset the shadow.
-   */
-   if ( drawBallHow == DRAW_BALL_SHADOW )
-   {
-      glTranslatef( SHADOW_OFFSET_X,
-                    SHADOW_OFFSET_Y,
-                    SHADOW_OFFSET_Z );
-   }
-
-  /*
-   * Tilt the ball.
-   */
-   glRotatef( -20.0, 0.0, 0.0, 1.0 );
-
-  /*
-   * Continually rotate ball around Y axis.
-   */
-   glRotatef( deg_rot_y, 0.0, 1.0, 0.0 );
-
-  /*
-   * Set OpenGL state for Boing ball.
-   */
-   glCullFace( GL_FRONT );
-   glEnable( GL_CULL_FACE );
-   glEnable( GL_NORMALIZE );
-
-  /*
-   * Build a faceted latitude slice of the Boing ball,
-   * stepping same-sized vertical bands of the sphere.
-   */
-   for ( lon_deg = 0;
-         lon_deg < 180;
-         lon_deg += STEP_LONGITUDE )
-   {
-     /*
-      * Draw a latitude circle at this longitude.
-      */
-      DrawBoingBallBand( lon_deg,
-                         lon_deg + STEP_LONGITUDE );
-   }
-
-   glPopMatrix();
-
-   return;
-}
-
-
-/*****************************************************************************
- * Bounce the ball.
- *****************************************************************************/
-void BounceBall( double delta_t )
-{
-   GLfloat sign;
-   GLfloat deg;
-
-   if ( override_pos )
-     return;
-
-   /* Bounce on walls */
-   if ( ball_x >  (BOUNCE_WIDTH/2 + WALL_R_OFFSET ) )
-   {
-      ball_x_inc = -0.5f - 0.75f * (GLfloat)rand() / (GLfloat)RAND_MAX;
-      deg_rot_y_inc = -deg_rot_y_inc;
-   }
-   if ( ball_x < -(BOUNCE_HEIGHT/2 + WALL_L_OFFSET) )
-   {
-      ball_x_inc =  0.5f + 0.75f * (GLfloat)rand() / (GLfloat)RAND_MAX;
-      deg_rot_y_inc = -deg_rot_y_inc;
-   }
-
-   /* Bounce on floor / roof */
-   if ( ball_y >  BOUNCE_HEIGHT/2      )
-   {
-      ball_y_inc = -0.75f - 1.f * (GLfloat)rand() / (GLfloat)RAND_MAX;
-   }
-   if ( ball_y < -BOUNCE_HEIGHT/2*0.85 )
-   {
-      ball_y_inc =  0.75f + 1.f * (GLfloat)rand() / (GLfloat)RAND_MAX;
-   }
-
-   /* Update ball position */
-   ball_x += ball_x_inc * ((float)delta_t*ANIMATION_SPEED);
-   ball_y += ball_y_inc * ((float)delta_t*ANIMATION_SPEED);
-
-  /*
-   * Simulate the effects of gravity on Y movement.
-   */
-   if ( ball_y_inc < 0 ) sign = -1.0; else sign = 1.0;
-
-   deg = (ball_y + BOUNCE_HEIGHT/2) * 90 / BOUNCE_HEIGHT;
-   if ( deg > 80 ) deg = 80;
-   if ( deg < 10 ) deg = 10;
-
-   ball_y_inc = sign * 4.f * (float) sin_deg( deg );
-}
-
-
-/*****************************************************************************
- * Draw a faceted latitude band of the Boing ball.
- *
- * Parms:   long_lo, long_hi
- *          Low and high longitudes of slice, resp.
- *****************************************************************************/
-void DrawBoingBallBand( GLfloat long_lo,
-                        GLfloat long_hi )
-{
-   vertex_t vert_ne;            /* "ne" means south-east, so on */
-   vertex_t vert_nw;
-   vertex_t vert_sw;
-   vertex_t vert_se;
-   vertex_t vert_norm;
-   GLfloat  lat_deg;
-   static int colorToggle = 0;
-
-  /*
-   * Iterate through the points of a latitude circle.
-   * A latitude circle is a 2D set of X,Z points.
-   */
-   for ( lat_deg = 0;
-         lat_deg <= (360 - STEP_LATITUDE);
-         lat_deg += STEP_LATITUDE )
-   {
-     /*
-      * Color this polygon with red or white.
-      */
-      if ( colorToggle )
-         glColor3f( 0.8f, 0.1f, 0.1f );
-      else
-         glColor3f( 0.95f, 0.95f, 0.95f );
-#if 0
-      if ( lat_deg >= 180 )
-         if ( colorToggle )
-            glColor3f( 0.1f, 0.8f, 0.1f );
-         else
-            glColor3f( 0.5f, 0.5f, 0.95f );
-#endif
-      colorToggle = ! colorToggle;
-
-     /*
-      * Change color if drawing shadow.
-      */
-      if ( drawBallHow == DRAW_BALL_SHADOW )
-         glColor3f( 0.35f, 0.35f, 0.35f );
-
-     /*
-      * Assign each Y.
-      */
-      vert_ne.y = vert_nw.y = (float) cos_deg(long_hi) * RADIUS;
-      vert_sw.y = vert_se.y = (float) cos_deg(long_lo) * RADIUS;
-
-     /*
-      * Assign each X,Z with sin,cos values scaled by latitude radius indexed by longitude.
-      * Eg, long=0 and long=180 are at the poles, so zero scale is sin(longitude),
-      * while long=90 (sin(90)=1) is at equator.
-      */
-      vert_ne.x = (float) cos_deg( lat_deg                 ) * (RADIUS * (float) sin_deg( long_lo + STEP_LONGITUDE ));
-      vert_se.x = (float) cos_deg( lat_deg                 ) * (RADIUS * (float) sin_deg( long_lo                  ));
-      vert_nw.x = (float) cos_deg( lat_deg + STEP_LATITUDE ) * (RADIUS * (float) sin_deg( long_lo + STEP_LONGITUDE ));
-      vert_sw.x = (float) cos_deg( lat_deg + STEP_LATITUDE ) * (RADIUS * (float) sin_deg( long_lo                  ));
-
-      vert_ne.z = (float) sin_deg( lat_deg                 ) * (RADIUS * (float) sin_deg( long_lo + STEP_LONGITUDE ));
-      vert_se.z = (float) sin_deg( lat_deg                 ) * (RADIUS * (float) sin_deg( long_lo                  ));
-      vert_nw.z = (float) sin_deg( lat_deg + STEP_LATITUDE ) * (RADIUS * (float) sin_deg( long_lo + STEP_LONGITUDE ));
-      vert_sw.z = (float) sin_deg( lat_deg + STEP_LATITUDE ) * (RADIUS * (float) sin_deg( long_lo                  ));
-
-     /*
-      * Draw the facet.
-      */
-      glBegin( GL_POLYGON );
-
-      CrossProduct( vert_ne, vert_nw, vert_sw, &vert_norm );
-      glNormal3f( vert_norm.x, vert_norm.y, vert_norm.z );
-
-      glVertex3f( vert_ne.x, vert_ne.y, vert_ne.z );
-      glVertex3f( vert_nw.x, vert_nw.y, vert_nw.z );
-      glVertex3f( vert_sw.x, vert_sw.y, vert_sw.z );
-      glVertex3f( vert_se.x, vert_se.y, vert_se.z );
-
-      glEnd();
-
-#if BOING_DEBUG
-      printf( "----------------------------------------------------------- \n" );
-      printf( "lat = %f  long_lo = %f  long_hi = %f \n", lat_deg, long_lo, long_hi );
-      printf( "vert_ne  x = %.8f  y = %.8f  z = %.8f \n", vert_ne.x, vert_ne.y, vert_ne.z );
-      printf( "vert_nw  x = %.8f  y = %.8f  z = %.8f \n", vert_nw.x, vert_nw.y, vert_nw.z );
-      printf( "vert_se  x = %.8f  y = %.8f  z = %.8f \n", vert_se.x, vert_se.y, vert_se.z );
-      printf( "vert_sw  x = %.8f  y = %.8f  z = %.8f \n", vert_sw.x, vert_sw.y, vert_sw.z );
-#endif
-
-   }
-
-  /*
-   * Toggle color so that next band will opposite red/white colors than this one.
-   */
-   colorToggle = ! colorToggle;
-
-  /*
-   * This circular band is done.
-   */
-   return;
-}
-
-
-/*****************************************************************************
- * Draw the purple grid of lines, behind the Boing ball.
- * When the Workbench is dropped to the bottom, Boing shows 12 rows.
- *****************************************************************************/
-void DrawGrid( void )
-{
-   int              row, col;
-   const int        rowTotal    = 12;                   /* must be divisible by 2 */
-   const int        colTotal    = rowTotal;             /* must be same as rowTotal */
-   const GLfloat    widthLine   = 2.0;                  /* should be divisible by 2 */
-   const GLfloat    sizeCell    = GRID_SIZE / rowTotal;
-   const GLfloat    z_offset    = -40.0;
-   GLfloat          xl, xr;
-   GLfloat          yt, yb;
-
-   glPushMatrix();
-   glDisable( GL_CULL_FACE );
-
-  /*
-   * Another relative Z translation to separate objects.
-   */
-   glTranslatef( 0.0, 0.0, DIST_BALL );
-
-  /*
-   * Draw vertical lines (as skinny 3D rectangles).
-   */
-   for ( col = 0; col <= colTotal; col++ )
-   {
-     /*
-      * Compute co-ords of line.
-      */
-      xl = -GRID_SIZE / 2 + col * sizeCell;
-      xr = xl + widthLine;
-
-      yt =  GRID_SIZE / 2;
-      yb = -GRID_SIZE / 2 - widthLine;
-
-      glBegin( GL_POLYGON );
-
-      glColor3f( 0.6f, 0.1f, 0.6f );               /* purple */
-
-      glVertex3f( xr, yt, z_offset );       /* NE */
-      glVertex3f( xl, yt, z_offset );       /* NW */
-      glVertex3f( xl, yb, z_offset );       /* SW */
-      glVertex3f( xr, yb, z_offset );       /* SE */
-
-      glEnd();
-   }
-
-  /*
-   * Draw horizontal lines (as skinny 3D rectangles).
-   */
-   for ( row = 0; row <= rowTotal; row++ )
-   {
-     /*
-      * Compute co-ords of line.
-      */
-      yt = GRID_SIZE / 2 - row * sizeCell;
-      yb = yt - widthLine;
-
-      xl = -GRID_SIZE / 2;
-      xr =  GRID_SIZE / 2 + widthLine;
-
-      glBegin( GL_POLYGON );
-
-      glColor3f( 0.6f, 0.1f, 0.6f );               /* purple */
-
-      glVertex3f( xr, yt, z_offset );       /* NE */
-      glVertex3f( xl, yt, z_offset );       /* NW */
-      glVertex3f( xl, yb, z_offset );       /* SW */
-      glVertex3f( xr, yb, z_offset );       /* SE */
-
-      glEnd();
-   }
-
-   glPopMatrix();
-
-   return;
-}
 
 
 
@@ -631,7 +241,7 @@ static JSValue js_initContext(JSContext *ctx, JSValueConst this_val,
     if( !glfwInit() )
         exit( EXIT_FAILURE );
 
-    window = glfwCreateWindow( 400, 400, "Boing (classic Amiga demo)", NULL, NULL );
+    window = glfwCreateWindow( 400, 400, "Zhuobu", NULL, NULL );
     if (!window)
     {
         glfwTerminate();
@@ -642,8 +252,6 @@ static JSValue js_initContext(JSContext *ctx, JSValueConst this_val,
 
     glfwSetFramebufferSizeCallback(window, reshape);
     glfwSetKeyCallback(window, key_callback);
-    glfwSetMouseButtonCallback(window, mouse_button_callback);
-    glfwSetCursorPosCallback(window, cursor_position_callback);
 
     glfwMakeContextCurrent(window);
     gladLoadGL(glfwGetProcAddress);
@@ -653,7 +261,6 @@ static JSValue js_initContext(JSContext *ctx, JSValueConst this_val,
     reshape(window, width, height);
 
     glfwSetTime( 0.0 );
-    init();
     return JS_UNDEFINED;
 }
 static JSValue js_uninitContext(JSContext *ctx, JSValueConst this_val,
@@ -663,35 +270,125 @@ static JSValue js_uninitContext(JSContext *ctx, JSValueConst this_val,
    glfwTerminate();
    exit( EXIT_SUCCESS );
 }
-static JSValue js_tick(JSContext *ctx, JSValueConst this_val,
+
+static JSValue js_now(JSContext *ctx, JSValueConst this_val,
                       int argc, JSValueConst *argv)
 {
-    /* Main loop */
-    for (;;)
-    {
-        /* Timing */
-        t = glfwGetTime();
-        dt = t - t_old;
-        t_old = t;
- 
-        /* Draw one frame */
-        display();
- 
-        /* Swap buffers */
-        glfwSwapBuffers(window);
-        glfwPollEvents();
- 
-        /* Check if we are still running */
-        if (glfwWindowShouldClose(window))
-            break;
-    }
+    return JS_NewFloat64(ctx, t * 1000);
+}
+
+static JSValue js_beginFrame(JSContext *ctx, JSValueConst this_val,
+                      int argc, JSValueConst *argv)
+{
+   /* Timing */
+   t = glfwGetTime();
+   dt = t - t_old;
+   t_old = t;
+   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+   // init projection matrix
+   glMatrixMode(GL_PROJECTION);
+   glLoadIdentity();
+   glOrtho(0, width, height, 0, -1, 1);
+   glMatrixMode(GL_MODELVIEW);
+   glLoadIdentity();
+
+   return JS_UNDEFINED;
+}
+static JSValue js_endFrame(JSContext *ctx, JSValueConst this_val,
+                      int argc, JSValueConst *argv)
+{
+   glFlush();
+   /* Swap buffers */
+   glfwSwapBuffers(window);
+   glfwPollEvents();
+   return JS_UNDEFINED;
+}
+
+static JSValue js_shouldClose(JSContext *ctx, JSValueConst this_val,
+                      int argc, JSValueConst *argv)
+{
+    return JS_NewBool(ctx, glfwWindowShouldClose(window));
+}
+
+static JSValue js_setClearColor(JSContext *ctx, JSValueConst this_val,
+                      int argc, JSValueConst *argv)
+{
+    double r, g, b, a;
+    if (JS_ToFloat64(ctx, &r, argv[0]))
+        return JS_EXCEPTION;
+    if (JS_ToFloat64(ctx, &g, argv[1]))
+        return JS_EXCEPTION;
+    if (JS_ToFloat64(ctx, &b, argv[2]))
+        return JS_EXCEPTION;
+    if (JS_ToFloat64(ctx, &a, argv[3]))
+        return JS_EXCEPTION;
+    glClearColor(r, g, b, a);
     return JS_UNDEFINED;
 }
 
+double* readNumbers(JSContext *ctx, JSValueConst array) {
+    JSValue length_val = JS_GetPropertyStr(ctx, array, "length");
+    uint32_t len = JS_VALUE_GET_INT(length_val);
+    double* numbers = malloc(len * sizeof(double));
+    for (uint32_t i = 0; i < len; i++) {
+        JSValue element = JS_GetPropertyUint32(ctx, array, i);
+        if (JS_IsNumber(element)) {
+            double num;
+            JS_ToFloat64(ctx, &num, element);
+            numbers[i] = num;
+        }
+        JS_FreeValue(ctx, element);
+    }
+    return numbers;
+}
+
+static JSValue js_drawSquare(JSContext *ctx, JSValueConst this_val,
+                      int argc, JSValueConst *argv)
+{
+   double rotation;
+   double* position = readNumbers(ctx, argv[0]);
+   JS_ToFloat64(ctx, &rotation, argv[1]);
+   double* scale = readNumbers(ctx, argv[2]);
+   double* color = readNumbers(ctx, argv[3]);
+   // now we draw the square
+   glPushMatrix();
+   glTranslatef(position[0], position[1], position[2]);
+   glRotatef(rotation * (180.0 / M_PI), 0.0, 0.0, 1.0);
+   glScalef(scale[0], scale[1], scale[2]);
+   glBegin(GL_QUADS);
+   glColor4f(color[0], color[1], color[2], color[3]);
+   glVertex3f(0, 0, 0.0f);
+   glVertex3f(8, 0, 0.0f);
+   glVertex3f(8, 8, 0.0f);
+   glVertex3f(0, 8, 0.0f);
+   glEnd();
+   glPopMatrix();
+   return JS_UNDEFINED;
+}
+static JSValue js_getScreenWidth(JSContext *ctx, JSValueConst this_val,
+                      int argc, JSValueConst *argv)
+{
+    return JS_NewInt32(ctx, width);
+}
+
+static JSValue js_getScreenHeight(JSContext *ctx, JSValueConst this_val,
+                      int argc, JSValueConst *argv)
+{
+    return JS_NewInt32(ctx, height);
+}
+
+
 static const JSCFunctionListEntry js_context_funcs[] = {
-    JS_CFUNC_DEF("initContext", 1, js_initContext),
-    JS_CFUNC_DEF("tick", 1, js_tick),
-    JS_CFUNC_DEF("uninitContext", 1, js_uninitContext),
+   JS_CFUNC_DEF("initContext", 1, js_initContext),
+   JS_CFUNC_DEF("uninitContext", 1, js_uninitContext),
+   JS_CFUNC_DEF("shouldClose", 0, js_shouldClose),
+   JS_CFUNC_DEF("setClearColor", 1, js_setClearColor),
+   JS_CFUNC_DEF("beginFrame", 0, js_beginFrame),
+   JS_CFUNC_DEF("endFrame", 0, js_endFrame),
+   JS_CFUNC_DEF("drawSquare", 0, js_drawSquare),
+   JS_CFUNC_DEF("now", 0, js_now),
+   JS_CFUNC_DEF("getScreenWidth", 0, js_getScreenWidth),
+   JS_CFUNC_DEF("getScreenHeight", 0, js_getScreenHeight),
 };
 
 static int js_context_init(JSContext *ctx, JSModuleDef *m)

@@ -1,5 +1,6 @@
 //@ts-nocheck
 
+const { platform } = wx.getSystemInfoSync()
 const windowInfo = wx.getWindowInfo();
 
 const events = {}
@@ -111,7 +112,6 @@ function inject() {
         _window.canvas.removeEventListener = _window.removeEventListener
     }
 
-    const { platform } = wx.getSystemInfoSync()
 
     // 开发者工具无法重定义 window
     if (platform === 'devtools') {

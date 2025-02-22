@@ -2,8 +2,9 @@
     "compilerOptions": {
         "strict": true,
         "checkJs": true,
+        "target": "ES2015",
         "paths": {
-            "context.so": ["./libs/context.js"]
+            "libs/context.so": ["./libs/context.js"]
         }
     }
 }
