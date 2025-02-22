@@ -101,6 +101,10 @@ const context = {
     vao: null,
 };
 
+export function pollEvents() {
+    // no-op
+}
+
 export function getScreenWidth() {
     const { gl } = context;
     if (!gl) {

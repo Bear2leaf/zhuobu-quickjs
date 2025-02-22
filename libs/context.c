@@ -54,148 +54,12 @@ void init( void );
 void reshape( GLFWwindow* window, int w, int h );
 void key_callback( GLFWwindow* window, int key, int scancode, int action, int mods );
 
-#define RADIUS           70.f
-#define STEP_LONGITUDE   22.5f                   /* 22.5 makes 8 bands like original Boing */
-#define STEP_LATITUDE    22.5f
-
-#define DIST_BALL       (RADIUS * 2.f + RADIUS * 0.1f)
-
-#define VIEW_SCENE_DIST (DIST_BALL * 3.f + 200.f)/* distance from viewer to middle of boing area */
-#define GRID_SIZE       (RADIUS * 4.5f)          /* length (width) of grid */
-#define BOUNCE_HEIGHT   (RADIUS * 2.1f)
-#define BOUNCE_WIDTH    (RADIUS * 2.1f)
-
-#define SHADOW_OFFSET_X -20.f
-#define SHADOW_OFFSET_Y  10.f
-#define SHADOW_OFFSET_Z   0.f
-
-#define WALL_L_OFFSET   0.f
-#define WALL_R_OFFSET   5.f
-
-/* Animation speed (50.0 mimics the original GLUT demo speed) */
-#define ANIMATION_SPEED 50.f
-
-/* Maximum allowed delta time per physics iteration */
-#define MAX_DELTA_T 0.02f
-
-/* Draw ball, or its shadow */
-typedef enum { DRAW_BALL, DRAW_BALL_SHADOW } DRAW_BALL_ENUM;
-
-/* Vertex type */
-typedef struct {float x; float y; float z;} vertex_t;
-
 /* Global vars */
 int windowed_xpos, windowed_ypos, windowed_width, windowed_height;
 int width, height;
-GLfloat deg_rot_y       = 0.f;
-GLfloat deg_rot_y_inc   = 2.f;
-int override_pos        = GLFW_FALSE;
-GLfloat cursor_x        = 0.f;
-GLfloat cursor_y        = 0.f;
-GLfloat ball_x          = -RADIUS;
-GLfloat ball_y          = -RADIUS;
-GLfloat ball_x_inc      = 1.f;
-GLfloat ball_y_inc      = 2.f;
-DRAW_BALL_ENUM drawBallHow;
-double  t;
-double  t_old = 0.f;
-double  dt;
-
-/* Random number generator */
-#ifndef RAND_MAX
- #define RAND_MAX 4095
-#endif
-
-
-/*****************************************************************************
- * Truncate a degree.
- *****************************************************************************/
-GLfloat TruncateDeg( GLfloat deg )
-{
-   if ( deg >= 360.f )
-      return (deg - 360.f);
-   else
-      return deg;
-}
-
-/*****************************************************************************
- * Convert a degree (360-based) into a radian.
- * 360' = 2 * PI
- *****************************************************************************/
-double deg2rad( double deg )
-{
-   return deg / 360 * (2 * M_PI);
-}
-
-/*****************************************************************************
- * 360' sin().
- *****************************************************************************/
-double sin_deg( double deg )
-{
-   return sin( deg2rad( deg ) );
-}
-
-/*****************************************************************************
- * 360' cos().
- *****************************************************************************/
-double cos_deg( double deg )
-{
-   return cos( deg2rad( deg ) );
-}
-
-/*****************************************************************************
- * Compute a cross product (for a normal vector).
- *
- * c = a x b
- *****************************************************************************/
-void CrossProduct( vertex_t a, vertex_t b, vertex_t c, vertex_t *n )
-{
-   GLfloat u1, u2, u3;
-   GLfloat v1, v2, v3;
-
-   u1 = b.x - a.x;
-   u2 = b.y - a.y;
-   u3 = b.y - a.z;
-
-   v1 = c.x - a.x;
-   v2 = c.y - a.y;
-   v3 = c.z - a.z;
-
-   n->x = u2 * v3 - v2 * u3;
-   n->y = u3 * v1 - v3 * u1;
-   n->z = u1 * v2 - v1 * u2;
-}
-
-
-#define BOING_DEBUG 0
 
 
 
-/*****************************************************************************
- * reshape()
- *****************************************************************************/
- void reshape( GLFWwindow* window, int w, int h )
- {
-    mat4x4 projection, view;
- 
-    glViewport( 0, 0, (GLsizei)w, (GLsizei)h );
- 
-    glMatrixMode( GL_PROJECTION );
-    mat4x4_perspective( projection,
-                        2.f * (float) atan2( RADIUS, 200.f ),
-                        (float)w / (float)h,
-                        1.f, VIEW_SCENE_DIST );
-    glLoadMatrixf((const GLfloat*) projection);
- 
-    glMatrixMode( GL_MODELVIEW );
-    {
-       vec3 eye = { 0.f, 0.f, VIEW_SCENE_DIST };
-       vec3 center = { 0.f, 0.f, 0.f };
-       vec3 up = { 0.f, -1.f, 0.f };
-       mat4x4_look_at( view, eye, center, up );
-    }
-    glLoadMatrixf((const GLfloat*) view);
- }
 void key_callback( GLFWwindow* window, int key, int scancode, int action, int mods )
 {
     if (action != GLFW_PRESS)
@@ -250,7 +114,6 @@ static JSValue js_initContext(JSContext *ctx, JSValueConst this_val,
 
     glfwSetWindowAspectRatio(window, 1, 1);
 
-    glfwSetFramebufferSizeCallback(window, reshape);
     glfwSetKeyCallback(window, key_callback);
 
     glfwMakeContextCurrent(window);
@@ -258,7 +121,6 @@ static JSValue js_initContext(JSContext *ctx, JSValueConst this_val,
     glfwSwapInterval( 1 );
 
     glfwGetFramebufferSize(window, &width, &height);
-    reshape(window, width, height);
 
     glfwSetTime( 0.0 );
     return JS_UNDEFINED;
@@ -274,16 +136,12 @@ static JSValue js_uninitContext(JSContext *ctx, JSValueConst this_val,
 static JSValue js_now(JSContext *ctx, JSValueConst this_val,
                       int argc, JSValueConst *argv)
 {
-    return JS_NewFloat64(ctx, t * 1000);
+    return JS_NewFloat64(ctx, glfwGetTime() * 1000);
 }
 
 static JSValue js_beginFrame(JSContext *ctx, JSValueConst this_val,
                       int argc, JSValueConst *argv)
 {
-   /* Timing */
-   t = glfwGetTime();
-   dt = t - t_old;
-   t_old = t;
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
    // init projection matrix
    glMatrixMode(GL_PROJECTION);
@@ -294,13 +152,17 @@ static JSValue js_beginFrame(JSContext *ctx, JSValueConst this_val,
 
    return JS_UNDEFINED;
 }
+static JSValue js_pollEvents(JSContext *ctx, JSValueConst this_val,
+                      int argc, JSValueConst *argv)
+{
+   glfwPollEvents();
+   return JS_UNDEFINED;
+}
 static JSValue js_endFrame(JSContext *ctx, JSValueConst this_val,
                       int argc, JSValueConst *argv)
 {
-   glFlush();
    /* Swap buffers */
    glfwSwapBuffers(window);
-   glfwPollEvents();
    return JS_UNDEFINED;
 }
 
@@ -379,16 +241,17 @@ static JSValue js_getScreenHeight(JSContext *ctx, JSValueConst this_val,
 
 
 static const JSCFunctionListEntry js_context_funcs[] = {
-   JS_CFUNC_DEF("initContext", 1, js_initContext),
-   JS_CFUNC_DEF("uninitContext", 1, js_uninitContext),
-   JS_CFUNC_DEF("shouldClose", 0, js_shouldClose),
-   JS_CFUNC_DEF("setClearColor", 1, js_setClearColor),
-   JS_CFUNC_DEF("beginFrame", 0, js_beginFrame),
-   JS_CFUNC_DEF("endFrame", 0, js_endFrame),
-   JS_CFUNC_DEF("drawSquare", 0, js_drawSquare),
-   JS_CFUNC_DEF("now", 0, js_now),
-   JS_CFUNC_DEF("getScreenWidth", 0, js_getScreenWidth),
-   JS_CFUNC_DEF("getScreenHeight", 0, js_getScreenHeight),
+    JS_CFUNC_DEF("initContext", 1, js_initContext),
+    JS_CFUNC_DEF("uninitContext", 1, js_uninitContext),
+    JS_CFUNC_DEF("shouldClose", 0, js_shouldClose),
+    JS_CFUNC_DEF("setClearColor", 1, js_setClearColor),
+    JS_CFUNC_DEF("beginFrame", 0, js_beginFrame),
+    JS_CFUNC_DEF("endFrame", 0, js_endFrame),
+    JS_CFUNC_DEF("drawSquare", 0, js_drawSquare),
+    JS_CFUNC_DEF("now", 0, js_now),
+    JS_CFUNC_DEF("getScreenWidth", 0, js_getScreenWidth),
+    JS_CFUNC_DEF("getScreenHeight", 0, js_getScreenHeight),
+    JS_CFUNC_DEF("pollEvents", 0, js_pollEvents),
 };
 
 static int js_context_init(JSContext *ctx, JSModuleDef *m)
