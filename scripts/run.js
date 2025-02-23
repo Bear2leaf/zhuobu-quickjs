@@ -1,48 +1,40 @@
-import { initContext, uninitContext, shouldClose, beginFrame, endFrame, setClearColor, drawSquare, now, getScreenWidth, getScreenHeight, pollEvents } from "../libs/context.so";
-import { vec4, vec3, mat4 } from "../libs/gl-matrix/index.js";
-const color = vec4.create();
-const camera = vec3.create();
+import { getTime, initContext, pollEvents, shouldCloseWindow, swapBuffers, terminate } from "../libs/context.so";
+import { init, update, render, load } from "./engine.js";
 
 
-function drawSquares() {
-    vec3.set(camera, getScreenWidth() / 2, getScreenHeight() / 2, 0);
-    for (let i = 0; i < 10; i++) {
-        // rainbow colors
-        vec4.set(color, Math.sin(now() / 1000 + Math.PI / 4 * i) / 2 + 0.5, Math.sin(now() / 1000 + Math.PI / 4 * i + 2 * Math.PI / 3) / 2 + 0.5, Math.sin(now() / 1000 + Math.PI / 4 * i + 4 * Math.PI / 3) / 2 + 0.5, 1);
-        drawSquare(camera, now() / 1000 + Math.PI / 4 * i / 1.5, vec3.fromValues(20, 20, 1), color);
-    }
-}
 const FPS = 60;
 
-export function mainQuickjs() {
-    initContext();
-    let lastTime = now();
+
+export async function mainQuickjs() {
+    await load();
+    let lastTime = getTime();
     let acc = 0;
+    init();
     do {
-        pollEvents();
-        const currentTime = now();
+        const currentTime = getTime();
         const delta = currentTime - lastTime;
         acc += delta;
         lastTime = currentTime;
-        while (acc >= 1000 / FPS) {
-            acc -= 1000 / FPS;
-            setClearColor(0.0, 0.0, 0.0, 1.0);
-            beginFrame();
-            drawSquares();
-            endFrame();
+        while (acc >= 1 / FPS) {
+            acc -= 1 / FPS;
+            update();
         }
-    } while (!shouldClose());
-    uninitContext();
+        render();
+        swapBuffers();
+        pollEvents();
+    } while (!shouldCloseWindow());
+    terminate();
 }
-export function main() {
-    initContext();
+export async function main() {
+    await load();
+    init();
     function loop() {
-        setClearColor(0.0, 0.0, 0.0, 1.0);
-        beginFrame();
-        drawSquares();
-        endFrame();
+        update();
+        render();
         requestAnimationFrame(loop);
     }
     loop();
 
 }
+
+

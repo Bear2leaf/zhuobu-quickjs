@@ -4,4 +4,5 @@ a.out
 *.o
 *.so
 .obj
+.DS_Store
 project.private.config.json

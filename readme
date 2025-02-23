@@ -1,7 +1,12 @@
 simple cross-platform build script for my dummy game.
-```shell
 
-git submodule update --init --recursive
+## Usage
 
-sh compile.sh && qjs main.js
+To build the game, run the following command:
+
+```sh
+make run
 ```
+
+This will compile the game for your current platform.
+

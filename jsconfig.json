@@ -3,8 +3,10 @@
         "strict": true,
         "checkJs": true,
         "target": "ES2015",
+        "module": "ES2015",
         "paths": {
             "libs/context.so": ["./libs/context.js"]
-        }
+        },
+        "lib": ["ES2015"]
     }
 }

@@ -1,199 +1,154 @@
-#include "quickjs/quickjs.h"
-/*****************************************************************************
- * Title:   GLBoing
- * Desc:    Tribute to Amiga Boing.
- * Author:  Jim Brooks  <gfx@jimbrooks.org>
- *          Original Amiga authors were R.J. Mical and Dale Luck.
- *          GLFW conversion by Marcus Geelnard
- * Notes:   - 360' = 2*PI [radian]
- *
- *          - Distances between objects are created by doing a relative
- *            Z translations.
- *
- *          - Although OpenGL enticingly supports alpha-blending,
- *            the shadow of the original Boing didn't affect the color
- *            of the grid.
- *
- *          - [Marcus] Changed timing scheme from interval driven to frame-
- *            time based animation steps (which results in much smoother
- *            movement)
- *
- * History of Amiga Boing:
- *
- * Boing was demonstrated on the prototype Amiga (codenamed "Lorraine") in
- * 1985. According to legend, it was written ad-hoc in one night by
- * R. J. Mical and Dale Luck. Because the bouncing ball animation was so fast
- * and smooth, attendees did not believe the Amiga prototype was really doing
- * the rendering. Suspecting a trick, they began looking around the booth for
- * a hidden computer or VCR.
- *****************************************************************************/
-
- #if defined(_MSC_VER)
- // Make MS math.h define M_PI
- #define _USE_MATH_DEFINES
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
+#include <string.h>
+#include "quickjs/quickjs.h"
 
-#define GLAD_GL_IMPLEMENTATION
-#include <glad/gl.h>
-#define GLFW_INCLUDE_NONE
+#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include <linmath.h>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
+void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+void processInput(GLFWwindow* window);
+
+// settings
+const unsigned int width = 400;
+const unsigned int height = 400;
 
 
-/*****************************************************************************
- * Various declarations and macros
- *****************************************************************************/
-
-/* Prototypes */
-void init( void );
-void reshape( GLFWwindow* window, int w, int h );
-void key_callback( GLFWwindow* window, int key, int scancode, int action, int mods );
-
-/* Global vars */
-int windowed_xpos, windowed_ypos, windowed_width, windowed_height;
-int width, height;
-
-
-
-void key_callback( GLFWwindow* window, int key, int scancode, int action, int mods )
-{
-    if (action != GLFW_PRESS)
-        return;
-
-    if (key == GLFW_KEY_ESCAPE && mods == 0)
-        glfwSetWindowShouldClose(window, GLFW_TRUE);
-    if ((key == GLFW_KEY_ENTER && mods == GLFW_MOD_ALT) ||
-        (key == GLFW_KEY_F11 && mods == GLFW_MOD_ALT))
-    {
-        if (glfwGetWindowMonitor(window))
-        {
-            glfwSetWindowMonitor(window, NULL,
-                                 windowed_xpos, windowed_ypos,
-                                 windowed_width, windowed_height, 0);
-        }
-        else
-        {
-            GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-            if (monitor)
-            {
-                const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-                glfwGetWindowPos(window, &windowed_xpos, &windowed_ypos);
-                glfwGetWindowSize(window, &windowed_width, &windowed_height);
-                glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
-            }
-        }
-    }
+// process all input: query GLFW whether relevant keys are pressed/released this
+// frame and react accordingly
+// ---------------------------------------------------------------------------------------------------------
+void processInput(GLFWwindow* window) {
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, 1);
 }
 
-
-
+// glfw: whenever the window size changed (by OS or user resize) this callback
+// function executes
+// ---------------------------------------------------------------------------------------------
+void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+    // make sure the viewport matches the new window dimensions; note that width
+    // and height will be significantly larger than specified on retina displays.
+    glViewport(0, 0, width, height);
+}
 
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
 
 GLFWwindow* window;
 
-static JSValue js_initContext(JSContext *ctx, JSValueConst this_val,
-    int argc, JSValueConst *argv)
-{
-
-    /* Init GLFW */
-    if( !glfwInit() )
-        exit( EXIT_FAILURE );
-
-    window = glfwCreateWindow( 400, 400, "Zhuobu", NULL, NULL );
-    if (!window)
-    {
-        glfwTerminate();
-        exit( EXIT_FAILURE );
+static JSValue js_loadImage(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    const char* filename = JS_ToCString(ctx, argv[0]);
+    int width, height, nrChannels;
+    stbi_set_flip_vertically_on_load(1); // tell stb_image.h to flip loaded texture's on the y-axis.
+    unsigned char* data = stbi_load(filename, &width, &height, &nrChannels, 0);
+    if (!data) {
+        return JS_EXCEPTION;
     }
-
-    glfwSetWindowAspectRatio(window, 1, 1);
-
-    glfwSetKeyCallback(window, key_callback);
-
-    glfwMakeContextCurrent(window);
-    gladLoadGL(glfwGetProcAddress);
-    glfwSwapInterval( 1 );
-
-    glfwGetFramebufferSize(window, &width, &height);
-
-    glfwSetTime( 0.0 );
-    return JS_UNDEFINED;
-}
-static JSValue js_uninitContext(JSContext *ctx, JSValueConst this_val,
-                      int argc, JSValueConst *argv)
-{
-
-   glfwTerminate();
-   exit( EXIT_SUCCESS );
+    JSValue ret = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, ret, "width", JS_NewInt32(ctx, width));
+    JS_SetPropertyStr(ctx, ret, "height", JS_NewInt32(ctx, height));
+    JS_SetPropertyStr(ctx, ret, "data", JS_NewArrayBufferCopy(ctx, data, width * height * nrChannels));
+    stbi_image_free(data);
+    return ret;
 }
 
-static JSValue js_now(JSContext *ctx, JSValueConst this_val,
-                      int argc, JSValueConst *argv)
-{
-    return JS_NewFloat64(ctx, glfwGetTime() * 1000);
+static JSValue js_createTexture(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    unsigned int texture;
+    glGenTextures(1, &texture);
+    return JS_NewInt32(ctx, texture);
 }
 
-static JSValue js_beginFrame(JSContext *ctx, JSValueConst this_val,
-                      int argc, JSValueConst *argv)
-{
-   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-   // init projection matrix
-   glMatrixMode(GL_PROJECTION);
-   glLoadIdentity();
-   glOrtho(0, width, height, 0, -1, 1);
-   glMatrixMode(GL_MODELVIEW);
-   glLoadIdentity();
-
-   return JS_UNDEFINED;
-}
-static JSValue js_pollEvents(JSContext *ctx, JSValueConst this_val,
-                      int argc, JSValueConst *argv)
-{
-   glfwPollEvents();
-   return JS_UNDEFINED;
-}
-static JSValue js_endFrame(JSContext *ctx, JSValueConst this_val,
-                      int argc, JSValueConst *argv)
-{
-   /* Swap buffers */
-   glfwSwapBuffers(window);
-   return JS_UNDEFINED;
-}
-
-static JSValue js_shouldClose(JSContext *ctx, JSValueConst this_val,
-                      int argc, JSValueConst *argv)
-{
-    return JS_NewBool(ctx, glfwWindowShouldClose(window));
-}
-
-static JSValue js_setClearColor(JSContext *ctx, JSValueConst this_val,
-                      int argc, JSValueConst *argv)
-{
-    double r, g, b, a;
-    if (JS_ToFloat64(ctx, &r, argv[0]))
-        return JS_EXCEPTION;
-    if (JS_ToFloat64(ctx, &g, argv[1]))
-        return JS_EXCEPTION;
-    if (JS_ToFloat64(ctx, &b, argv[2]))
-        return JS_EXCEPTION;
-    if (JS_ToFloat64(ctx, &a, argv[3]))
-        return JS_EXCEPTION;
-    glClearColor(r, g, b, a);
+static JSValue js_bindTexture(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    unsigned int texture;
+    JS_ToUint32(ctx, &texture, argv[0]);
+    glBindTexture(GL_TEXTURE_2D, texture);
     return JS_UNDEFINED;
 }
 
-double* readNumbers(JSContext *ctx, JSValueConst array) {
-    JSValue length_val = JS_GetPropertyStr(ctx, array, "length");
-    uint32_t len = JS_VALUE_GET_INT(length_val);
-    double* numbers = malloc(len * sizeof(double));
+static JSValue js_activeTexture(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    int texture;
+    JS_ToInt32(ctx, &texture, argv[0]);
+    glActiveTexture(GL_TEXTURE0 + texture);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_updateTexture(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    int width;
+    int height;
+    size_t size;
+    JSValue data = JS_GetPropertyStr(ctx, argv[0], "data");
+    JS_ToInt32(ctx, &width, JS_GetPropertyStr(ctx, argv[0], "width"));
+    JS_ToInt32(ctx, &height, JS_GetPropertyStr(ctx, argv[0], "height"));
+    unsigned char* pixels = JS_GetArrayBuffer(ctx, &size, data);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    GLenum format = GL_RGBA;
+    if (size == width * height * 3) {
+        format = GL_RGB;
+    }
+    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, pixels);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    JS_FreeValue(ctx, data);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_loadText(JSContext* ctx,
+                           JSValueConst this_val,
+                           int argc,
+                           JSValueConst* argv) {
+    const char* filename = JS_ToCString(ctx, argv[0]);
+    FILE* file = fopen(filename, "r");
+    if (!file) {
+        return JS_EXCEPTION;
+    }
+    fseek(file, 0, SEEK_END);
+    long length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    char* buffer = malloc(length + 1);
+    fread(buffer, 1, length, file);
+    buffer[length] = '\0';
+    fclose(file);
+    JSValue ret = JS_NewString(ctx, buffer);
+    free(buffer);
+    return ret;
+}
+char* concat(const char *s1, const char *s2)
+{
+    char *result = malloc(strlen(s1) + strlen(s2) + 1); // +1 for the null-terminator
+    // in real code you would check for errors in malloc here
+    strcpy(result, s1);
+    strcat(result, s2);
+    return result;
+}
+const char* GLSL_HEADER = "#version 330 core\n";
+
+
+float* getNumbers(JSContext* ctx, JSValueConst value) {
+    JSValue length = JS_GetPropertyStr(ctx, value, "length");
+    uint32_t len = JS_VALUE_GET_INT(length);
+    float* numbers = malloc(len * sizeof(float));
     for (uint32_t i = 0; i < len; i++) {
-        JSValue element = JS_GetPropertyUint32(ctx, array, i);
+        JSValue element = JS_GetPropertyUint32(ctx, value, i);
         if (JS_IsNumber(element)) {
             double num;
             JS_ToFloat64(ctx, &num, element);
@@ -204,71 +159,448 @@ double* readNumbers(JSContext *ctx, JSValueConst array) {
     return numbers;
 }
 
-static JSValue js_drawSquare(JSContext *ctx, JSValueConst this_val,
-                      int argc, JSValueConst *argv)
-{
-   double rotation;
-   double* position = readNumbers(ctx, argv[0]);
-   JS_ToFloat64(ctx, &rotation, argv[1]);
-   double* scale = readNumbers(ctx, argv[2]);
-   double* color = readNumbers(ctx, argv[3]);
-   // now we draw the square
-   glPushMatrix();
-   glTranslatef(position[0], position[1], position[2]);
-   glRotatef(rotation * (180.0 / M_PI), 0.0, 0.0, 1.0);
-   glScalef(scale[0], scale[1], scale[2]);
-   glBegin(GL_QUADS);
-   glColor4f(color[0], color[1], color[2], color[3]);
-   glVertex3f(0, 0, 0.0f);
-   glVertex3f(8, 0, 0.0f);
-   glVertex3f(8, 8, 0.0f);
-   glVertex3f(0, 8, 0.0f);
-   glEnd();
-   glPopMatrix();
-   return JS_UNDEFINED;
+static JSValue js_uniformMatrix4fv(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    int location;
+    int transpose;
+    const void* value = getNumbers(ctx, argv[2]);
+    JS_ToInt32(ctx, &location, argv[0]);
+    JS_ToInt32(ctx, &transpose, argv[1]);
+    glUniformMatrix4fv(location, 1, transpose, value);
+    return JS_UNDEFINED;
 }
-static JSValue js_getScreenWidth(JSContext *ctx, JSValueConst this_val,
-                      int argc, JSValueConst *argv)
-{
+
+static JSValue js_uniform1f(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    int location;
+    double v0;
+    JS_ToInt32(ctx, &location, argv[0]);
+    JS_ToFloat64(ctx, &v0, argv[1]);
+    glUniform1f(location, v0);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_uniform3f(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    int location;
+    double v0;
+    double v1;
+    double v2;
+    JS_ToInt32(ctx, &location, argv[0]);
+    JS_ToFloat64(ctx, &v0, argv[1]);
+    JS_ToFloat64(ctx, &v1, argv[2]);
+    JS_ToFloat64(ctx, &v2, argv[3]);
+    glUniform3f(location, v0, v1, v2);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_uniform4f(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    int location;
+    double v0;
+    double v1;
+    double v2;
+    double v3;
+    JS_ToInt32(ctx, &location, argv[0]);
+    JS_ToFloat64(ctx, &v0, argv[1]);
+    JS_ToFloat64(ctx, &v1, argv[2]);
+    JS_ToFloat64(ctx, &v2, argv[3]);
+    JS_ToFloat64(ctx, &v3, argv[4]);
+    glUniform4f(location, v0, v1, v2, v3);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_uniform1i(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    int location;
+    int v0;
+    JS_ToInt32(ctx, &location, argv[0]);
+    JS_ToInt32(ctx, &v0, argv[1]);
+    glUniform1i(location, v0);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_getUniformLocation(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    int program;
+    const char* name = JS_ToCString(ctx, argv[1]);
+    JS_ToInt32(ctx, &program, argv[0]);
+    return JS_NewInt32(ctx, glGetUniformLocation(program, name));
+}
+
+
+static JSValue js_createShaderProgram(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    const char* vertexShaderSource = concat(GLSL_HEADER, JS_ToCString(ctx, argv[0]));
+    const char* fragmentShaderSource = concat(GLSL_HEADER, JS_ToCString(ctx, argv[1]));
+
+
+    // build and compile our shader program
+    // ------------------------------------
+    // vertex shader
+    unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+    glCompileShader(vertexShader);
+    // check for shader compile errors
+    int success;
+    char infoLog[512];
+    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+        printf("ERROR::SHADER::VERTEX::COMPILATION_FAILED\n%s\n", infoLog);
+    }
+    // fragment shader
+    unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+    glCompileShader(fragmentShader);
+    // check for shader compile errors
+    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+        printf("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n%s\n", infoLog);
+    }
+    // link shaders
+    unsigned int shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
+    // check for linking errors
+    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+    if (!success) {
+        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+        printf("ERROR::SHADER::PROGRAM::LINKING_FAILED\n%s\n", infoLog);
+    }
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+    return JS_NewInt32(ctx, shaderProgram);
+}
+static JSValue js_bufferData(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    JSValue buffer = argv[0];
+    JSValue bufferLength = JS_GetPropertyStr(ctx, buffer, "length");
+    uint32_t length = JS_VALUE_GET_INT(bufferLength);
+    float* data = malloc(length * sizeof(float));
+    for (uint32_t i = 0; i < length; i++) {
+        JSValue element = JS_GetPropertyUint32(ctx, buffer, i);
+        if (JS_IsNumber(element)) {
+            double num;
+            JS_ToFloat64(ctx, &num, element);
+            data[i] = num;
+        }
+        JS_FreeValue(ctx, element);
+    }
+    glBufferData(GL_ARRAY_BUFFER, length * sizeof(float), data, GL_STATIC_DRAW);
+    free(data);
+    return JS_UNDEFINED;
+}
+static JSValue js_bufferDataElement(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    JSValue buffer = argv[0];
+    JSValue bufferLength = JS_GetPropertyStr(ctx, buffer, "length");
+    uint32_t length = JS_VALUE_GET_INT(bufferLength);
+    unsigned int* data = malloc(length * sizeof(unsigned int));
+    for (uint32_t i = 0; i < length; i++) {
+        JSValue element = JS_GetPropertyUint32(ctx, buffer, i);
+        if (JS_IsNumber(element)) {
+            unsigned int num;
+            JS_ToUint32(ctx, &num, element);
+            data[i] = num;
+        }
+        JS_FreeValue(ctx, element);
+    }
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, length * sizeof(unsigned int), data, GL_STATIC_DRAW);
+    free(data);
+    return JS_UNDEFINED;
+}
+static JSValue js_createVAO(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    unsigned int VAO;
+    glGenVertexArrays(1, &VAO);
+    return JS_NewInt32(ctx, VAO);
+}
+
+static JSValue js_createBuffer(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    unsigned int VBO;
+    glGenBuffers(1, &VBO);
+    return JS_NewInt32(ctx, VBO);
+}
+
+static JSValue js_bindVAO(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    unsigned int VAO;
+    JS_ToUint32(ctx, &VAO, argv[0]);
+    glBindVertexArray(VAO);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_bindVBO(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    unsigned int VBO;
+    JS_ToUint32(ctx, &VBO, argv[0]);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_bindEBO(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    unsigned int EBO;
+    JS_ToUint32(ctx, &EBO, argv[0]);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_setVertexAttributePointer(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    int index;
+    int size;
+    int normalized;
+    int stride;
+    int offset;
+    JS_ToInt32(ctx, &index, argv[0]);
+    JS_ToInt32(ctx, &size, argv[1]);
+    JS_ToInt32(ctx, &normalized, argv[2]);
+    JS_ToInt32(ctx, &stride, argv[3]);
+    JS_ToInt32(ctx, &offset, argv[4]);
+    glVertexAttribPointer(index, size, GL_FLOAT, normalized, stride * sizeof(float), (void*)(offset * sizeof(float)));
+    return JS_UNDEFINED;
+}
+
+static JSValue js_enableVertexAttribute(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    int index;
+    JS_ToInt32(ctx, &index, argv[0]);
+    glEnableVertexAttribArray(index);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_drawElements(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    int count;
+    JS_ToInt32(ctx, &count, argv[0]);
+    glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, 0);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_useProgram(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    int program;
+    JS_ToInt32(ctx, &program, argv[0]);
+    glUseProgram(program);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_clear(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    glClear(GL_COLOR_BUFFER_BIT);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_viewport(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    int x;
+    int y;
+    int width;
+    int height;
+    JS_ToInt32(ctx, &x, argv[0]);
+    JS_ToInt32(ctx, &y, argv[1]);
+    JS_ToInt32(ctx, &width, argv[2]);
+    JS_ToInt32(ctx, &height, argv[3]);
+    glViewport(x, y, width, height);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_shouldCloseWindow(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    return JS_NewBool(ctx, glfwWindowShouldClose(window));
+}
+
+static JSValue js_swapBuffers(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    glfwSwapBuffers(window);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_pollEvents(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    glfwPollEvents();
+    return JS_UNDEFINED;
+}
+
+static JSValue js_getTime(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    return JS_NewFloat64(ctx, glfwGetTime());
+}
+
+static JSValue js_initContext(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+
+    // glfw: initialize and configure
+    // ------------------------------
+    glfwInit();
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+#ifdef __APPLE__
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
+
+    // glfw window creation
+    // --------------------
+    window = glfwCreateWindow(width, height, "Zhuobu", NULL, NULL);
+    if (window == NULL)
+    {
+        printf("Failed to create GLFW window\n");
+        glfwTerminate();
+        return JS_UNDEFINED;
+    }
+    glfwMakeContextCurrent(window);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+    // glad: load all OpenGL function pointers
+    // ---------------------------------------
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+    {
+        printf("Failed to initialize GLAD\n");
+        return JS_UNDEFINED;
+    }    
+
+return JS_UNDEFINED;
+}
+static JSValue js_terminate(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    glfwTerminate();
+    exit(EXIT_SUCCESS);
+}
+
+
+static JSValue js_getScreenWidth(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
     return JS_NewInt32(ctx, width);
 }
 
-static JSValue js_getScreenHeight(JSContext *ctx, JSValueConst this_val,
-                      int argc, JSValueConst *argv)
-{
+static JSValue js_getScreenHeight(JSContext* ctx,
+     JSValueConst this_val,
+     int argc,
+     JSValueConst* argv) {
     return JS_NewInt32(ctx, height);
 }
-
-
+static JSValue js_clearColor(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    double r;
+    double g;
+    double b;
+    double a;
+    JS_ToFloat64(ctx, &r, argv[0]);
+    JS_ToFloat64(ctx, &g, argv[1]);
+    JS_ToFloat64(ctx, &b, argv[2]);
+    JS_ToFloat64(ctx, &a, argv[3]);
+    glClearColor(r, g, b, a);
+    return JS_UNDEFINED;
+}
 static const JSCFunctionListEntry js_context_funcs[] = {
-    JS_CFUNC_DEF("initContext", 1, js_initContext),
-    JS_CFUNC_DEF("uninitContext", 1, js_uninitContext),
-    JS_CFUNC_DEF("shouldClose", 0, js_shouldClose),
-    JS_CFUNC_DEF("setClearColor", 1, js_setClearColor),
-    JS_CFUNC_DEF("beginFrame", 0, js_beginFrame),
-    JS_CFUNC_DEF("endFrame", 0, js_endFrame),
-    JS_CFUNC_DEF("drawSquare", 0, js_drawSquare),
-    JS_CFUNC_DEF("now", 0, js_now),
+    JS_CFUNC_DEF("loadText", 1, js_loadText),
+    JS_CFUNC_DEF("createShaderProgram", 2, js_createShaderProgram),
+    JS_CFUNC_DEF("bufferData", 3, js_bufferData),
+    JS_CFUNC_DEF("bufferDataElement", 3, js_bufferDataElement),
+    JS_CFUNC_DEF("createVAO", 0, js_createVAO),
+    JS_CFUNC_DEF("createBuffer", 0, js_createBuffer),
+    JS_CFUNC_DEF("bindVAO", 1, js_bindVAO),
+    JS_CFUNC_DEF("bindVBO", 1, js_bindVBO),
+    JS_CFUNC_DEF("bindEBO", 1, js_bindEBO),
+    JS_CFUNC_DEF("setVertexAttributePointer", 5, js_setVertexAttributePointer),
+    JS_CFUNC_DEF("enableVertexAttribute", 1, js_enableVertexAttribute),
+    JS_CFUNC_DEF("drawElements", 4, js_drawElements),
+    JS_CFUNC_DEF("uniformMatrix4fv", 4, js_uniformMatrix4fv),
+    JS_CFUNC_DEF("uniform1f", 2, js_uniform1f),
+    JS_CFUNC_DEF("uniform3f", 4, js_uniform3f),
+    JS_CFUNC_DEF("uniform4f", 5, js_uniform4f),
+    JS_CFUNC_DEF("uniform1i", 2, js_uniform1i),
+    JS_CFUNC_DEF("getUniformLocation", 2, js_getUniformLocation),
+    JS_CFUNC_DEF("useProgram", 1, js_useProgram),
+    JS_CFUNC_DEF("clear", 0, js_clear),
     JS_CFUNC_DEF("getScreenWidth", 0, js_getScreenWidth),
     JS_CFUNC_DEF("getScreenHeight", 0, js_getScreenHeight),
+    JS_CFUNC_DEF("viewport", 4, js_viewport),
+    JS_CFUNC_DEF("shouldCloseWindow", 1, js_shouldCloseWindow),
+    JS_CFUNC_DEF("swapBuffers", 1, js_swapBuffers),
     JS_CFUNC_DEF("pollEvents", 0, js_pollEvents),
+    JS_CFUNC_DEF("getTime", 0, js_getTime),
+    JS_CFUNC_DEF("initContext", 0, js_initContext),
+    JS_CFUNC_DEF("terminate", 0, js_terminate),
+    JS_CFUNC_DEF("clearColor", 4, js_clearColor),
+    JS_CFUNC_DEF("loadImage", 1, js_loadImage),
+    JS_CFUNC_DEF("createTexture", 0, js_createTexture),
+    JS_CFUNC_DEF("bindTexture", 1, js_bindTexture),
+    JS_CFUNC_DEF("updateTexture", 1, js_updateTexture),
+    JS_CFUNC_DEF("activeTexture", 1, js_activeTexture),
 };
 
-static int js_context_init(JSContext *ctx, JSModuleDef *m)
-{
-    return JS_SetModuleExportList(ctx, m, js_context_funcs,
-                                  countof(js_context_funcs));
+
+
+static int js_context_init(JSContext* ctx, JSModuleDef* m) {
+    return JS_SetModuleExportList(ctx, m, js_context_funcs, countof(js_context_funcs));
 }
 
-#ifdef JS_SHARED_LIBRARY
-#define JS_INIT_MODULE js_init_module
-#else
-#define JS_INIT_MODULE js_init_module_fib
-#endif
-
-JSModuleDef *JS_INIT_MODULE(JSContext *ctx, const char *module_name)
-{
-    JSModuleDef *m;
+JSModuleDef* js_init_module(JSContext* ctx, const char* module_name) {
+    JSModuleDef* m;
     m = JS_NewCModule(ctx, module_name, js_context_init);
     if (!m)
         return NULL;
