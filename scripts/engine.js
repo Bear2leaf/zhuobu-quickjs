@@ -1,5 +1,6 @@
 import { clearColor, clear, createShaderProgram, useProgram, createBuffer, bindVBO, bufferData, createVAO, bindVAO, bindEBO, setVertexAttributePointer, enableVertexAttribute, drawElements, bufferDataElement, getUniformLocation, uniformMatrix4fv, getTime, uniform1f, uniform4f, loadText, loadImage, uniform1i, createTexture, bindTexture, updateTexture, initContext, activeTexture } from "../libs/context.so";
 import { mat4 } from "../libs/gl-matrix/index.js";
+import { updateecs } from "./ecs/testecs.js";
 
 
 /** @type {WebGLProgram}*/
@@ -37,7 +38,6 @@ export function init() {
     const vbo = createBuffer();
     const ebo = createBuffer();
     bindVAO(vao);
-
     const position = new Float32Array([
         0.5, 0.5, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0,
         0.5, -0.5, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
@@ -71,6 +71,7 @@ export function init() {
 const m = mat4.create();
 export function update() {
     if (!program) throw new Error("Program not initialized");
+    updateecs();
     mat4.identity(m)
     uniformMatrix4fv(getUniformLocation(program, "u_model"), false, m);
     uniformMatrix4fv(getUniformLocation(program, "u_view"), false, m);
