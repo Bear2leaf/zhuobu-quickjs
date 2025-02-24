@@ -43,6 +43,7 @@ GLFWwindow* window;
 
 static JSValue js_resize() {
     glViewport(0, 0, width, height);
+    return JS_UNDEFINED;
 }
 
 static JSValue js_loadImage(JSContext* ctx,
@@ -521,6 +522,7 @@ static JSValue js_initContext(JSContext* ctx,
         printf("Failed to initialize GLAD\n");
         return JS_UNDEFINED;
     }    
+    glfwSwapInterval(1);
 
 return JS_UNDEFINED;
 }
@@ -561,6 +563,17 @@ static JSValue js_clearColor(JSContext* ctx,
     glClearColor(r, g, b, a);
     return JS_UNDEFINED;
 }
+
+
+static JSValue js_getKey(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    int key;
+    JS_ToInt32(ctx, &key, argv[0]);
+    return JS_NewBool(ctx, glfwGetKey(window, key) == GLFW_PRESS);
+}
+
 static const JSCFunctionListEntry js_context_funcs[] = {
     JS_CFUNC_DEF("loadText", 1, js_loadText),
     JS_CFUNC_DEF("createShaderProgram", 2, js_createShaderProgram),
@@ -598,6 +611,7 @@ static const JSCFunctionListEntry js_context_funcs[] = {
     JS_CFUNC_DEF("updateTexture", 1, js_updateTexture),
     JS_CFUNC_DEF("activeTexture", 1, js_activeTexture),
     JS_CFUNC_DEF("resize", 0, js_resize),
+    JS_CFUNC_DEF("getKey", 1, js_getKey),
 };
 
 

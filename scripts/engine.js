@@ -1,5 +1,8 @@
 import { dummyWithBrainECS } from "./ecs/dummyWithBrainECS.js";
-import { loadText, loadImage, initContext, clearColor, createShaderProgram, useProgram, createVAO, createBuffer, bindVAO, bindVBO, bufferData, bindEBO, bufferDataElement, setVertexAttributePointer, enableVertexAttribute, createTexture, activeTexture, bindTexture, updateTexture, mat4, resize, getScreenWidth, getScreenHeight, uniformMatrix4fv, getUniformLocation, uniform1f, getTime, uniform1i, clear, drawElements } from "./libs.js";
+import { loadText, loadImage, initContext, clearColor, createShaderProgram, useProgram, createVAO, createBuffer, bindVAO, bindVBO, bufferData, bindEBO, bufferDataElement, setVertexAttributePointer, enableVertexAttribute, createTexture, activeTexture, bindTexture, updateTexture, mat4, resize, getScreenWidth, getScreenHeight, uniformMatrix4fv, getUniformLocation, uniform1f, getTime, uniform1i, clear, drawElements, pollEvents, shouldCloseWindow, swapBuffers, terminate, getKey } from "./libs.js";
+import { cHalfSizeX, cHalfSizeY } from "./misc/constants.js";
+import { KeyCode, KeyCodeGLFW, KeyInput } from "./misc/enums.js";
+import { Character } from "./object/Character.js";
 
 
 
@@ -19,8 +22,15 @@ let image2;
 let tex1;
 /** @type {WebGLTexture} */
 let tex2;
+/** @type {Character} */
+let character;
 
 
+/** @type {Set<number>} */
+const inputs = new Set();
+
+/** @type {Set<number>} */
+const prevInputs = new Set();
 
 export async function load() {
     vertexShaderSource = await loadText("resources/glsl/demo.vert.sk");
@@ -28,9 +38,10 @@ export async function load() {
     image1 = await loadImage("resources/image/container.jpg");
     image2 = await loadImage("resources/image/awesomeface.png");
 }
-
 export function init() {
     initContext();
+    character = new Character();
+    character.characterInit(inputs, prevInputs);
     clearColor(0.5, 1, 0.5, 1.0);
     program = createShaderProgram(vertexShaderSource, fragmentShaderSource);
     useProgram(program);
@@ -40,10 +51,10 @@ export function init() {
     bindVAO(vao);
     dummyWithBrainECS();
     const position = new Float32Array([
-        8, 8, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0,
-        8, -8, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-        -8, -8, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-        -8, 8, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0
+        cHalfSizeX, cHalfSizeY, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0,
+        cHalfSizeX, -cHalfSizeY, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
+        -cHalfSizeX, -cHalfSizeY, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+        -cHalfSizeX, cHalfSizeY, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0
     ]);
     bindVBO(vbo);
     bufferData(position);
@@ -70,28 +81,128 @@ export function init() {
 
 }
 const m = mat4.create();
-const zoom = 10;
-export function update() {
+const zoom = 1;
+/**
+ * 
+ * @param {number} delta 
+ */
+export function fixedUpdate(delta) {
     if (!program) throw new Error("Program not initialized");
-    resize();
+    character.deltaTime = delta;
+    character.characterUpdate();
     // updateecs();
+}
+export function render() {
+    resize();
+    clear();
     mat4.identity(m)
-    mat4.ortho(m, 0, getScreenWidth(), getScreenHeight(), 0, -1, 1);
+    mat4.ortho(m, 0, getScreenWidth(), 0, getScreenHeight(), 1, -1);
     uniformMatrix4fv(getUniformLocation(program, "u_projection"), false, m);
     mat4.identity(m);
     const viewOffset = [-getScreenWidth() / 2, -getScreenHeight() / 2];
-    mat4.lookAt(m, [...viewOffset, 1], [...viewOffset, 0], [0, 1, 0]);
+    mat4.lookAt(m, [...viewOffset, 1], [...viewOffset, -1], [0, 1, 0]);
     uniformMatrix4fv(getUniformLocation(program, "u_view"), false, m);
     mat4.identity(m)
     mat4.scale(m, m, [zoom, zoom, 1]);
+    uniformMatrix4fv(getUniformLocation(program, "u_world"), false, m);
+    mat4.identity(m)
+    mat4.translate(m, m, [character.position[0], character.position[1], 0]);
     uniformMatrix4fv(getUniformLocation(program, "u_model"), false, m);
-    uniform1f(getUniformLocation(program, "u_time"), getTime());
+    uniform1f(getUniformLocation(program, "u_time"), 0);
     bindTexture(tex1);
     uniform1i(getUniformLocation(program, "u_texture1"), 0);
     bindTexture(tex2);
     uniform1i(getUniformLocation(program, "u_texture2"), 1);
-}
-export function render() {
-    clear();
+    drawElements(6);
+    mat4.identity(m)
+    mat4.translate(m, m, [0, -40, 0]);
+    mat4.scale(m, m, [getScreenWidth(), 1, 1]);
+    uniformMatrix4fv(getUniformLocation(program, "u_model"), false, m);
+    uniform1f(getUniformLocation(program, "u_time"), 0);
+    bindTexture(tex1);
+    uniform1i(getUniformLocation(program, "u_texture1"), 0);
+    bindTexture(tex2);
+    uniform1i(getUniformLocation(program, "u_texture2"), 1);
     drawElements(6);
 }
+function update() {
+
+}
+let lastTime = getTime();
+export async function mainQuickjs() {
+    await load();
+    init();
+    let acc = 0;
+    do {
+        const currentTime = getTime();
+        const delta = currentTime - lastTime;
+        acc += delta;
+        lastTime = currentTime;
+        if (getKey(KeyCodeGLFW.RightKey)) {
+            inputs.add(KeyInput.GoRight)
+        } else {
+            inputs.delete(KeyInput.GoRight)
+        }
+        if (getKey(KeyCodeGLFW.LeftKey)) {
+            inputs.add(KeyInput.GoLeft);
+        } else {
+            inputs.delete(KeyInput.GoLeft)
+        }
+        if (getKey(KeyCodeGLFW.DownKey)) {
+            inputs.add(KeyInput.GoDown)
+        } else {
+            inputs.delete(KeyInput.GoDown)
+        }
+        if (getKey(KeyCodeGLFW.JumpKey)) {
+            inputs.add(KeyInput.Jump);
+        } else {
+            inputs.delete(KeyInput.Jump)
+        }
+        update();
+        while (acc >= 1 / FPS) {
+            fixedUpdate(acc);
+            acc -= 1 / FPS;
+        }
+        render();
+        swapBuffers();
+        pollEvents();
+    } while (!shouldCloseWindow());
+    terminate();
+}
+export async function main() {
+    await load();
+    init();
+    function loop() {
+        const currentTime = getTime();
+        const delta = currentTime - lastTime;
+        lastTime = currentTime;
+        if (getKey(KeyCode.RightKey)) {
+            inputs.add(KeyInput.GoRight)
+        } else {
+            inputs.delete(KeyInput.GoRight)
+        }
+        if (getKey(KeyCode.LeftKey)) {
+            inputs.add(KeyInput.GoLeft);
+        } else {
+            inputs.delete(KeyInput.GoLeft)
+        }
+        if (getKey(KeyCode.DownKey)) {
+            inputs.add(KeyInput.GoDown)
+        } else {
+            inputs.delete(KeyInput.GoDown)
+        }
+        if (getKey(KeyCode.JumpKey)) {
+            inputs.add(KeyInput.Jump);
+        } else {
+            inputs.delete(KeyInput.Jump)
+        }
+        update();
+        fixedUpdate(delta);
+        render();
+        requestAnimationFrame(loop);
+    }
+    loop();
+
+}
+export const FPS = 60;
+

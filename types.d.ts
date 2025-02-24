@@ -1,41 +1,41 @@
 interface IndexedCollection extends Iterable<number> {
-    readonly length: number;
-    [index: number]: number;
+  readonly length: number;
+  [index: number]: number;
 }
 
 // prettier-ignore
 declare type mat2 =
-  | [number, number, 
-     number, number]
+  | [number, number,
+    number, number]
   | IndexedCollection;
 
 // prettier-ignore
 declare type mat2d =
-  | [number, number, 
-     number, number, 
-     number, number]
+  | [number, number,
+    number, number,
+    number, number]
   | IndexedCollection;
 
 // prettier-ignore
 declare type mat3 =
-  | [number, number, number, 
-     number, number, number, 
-     number, number, number]
+  | [number, number, number,
+    number, number, number,
+    number, number, number]
   | IndexedCollection;
 
 // prettier-ignore
 declare type mat4 =
   | [number, number, number, number,
-     number, number, number, number,
-     number, number, number, number,
-     number, number, number, number]
+    number, number, number, number,
+    number, number, number, number,
+    number, number, number, number]
   | IndexedCollection;
 
 declare type quat = [number, number, number, number] | IndexedCollection;
 
 // prettier-ignore
 declare type quat2 =
-  | [number, number, number, number, 
+  | [number, number, number, number,
     number, number, number, number]
   | IndexedCollection;
 
@@ -46,37 +46,37 @@ declare type vec4 = [number, number, number, number] | IndexedCollection;
 // prettier-ignore
 declare type ReadonlyMat2 =
   | readonly [
-      number, number,
-      number, number
-    ]
+    number, number,
+    number, number
+  ]
   | IndexedCollection;
 
 // prettier-ignore
 declare type ReadonlyMat2d =
   | readonly [
-      number, number,
-      number, number,
-      number, number
-    ]
+    number, number,
+    number, number,
+    number, number
+  ]
   | IndexedCollection;
 
 // prettier-ignore
 declare type ReadonlyMat3 =
   | readonly [
-      number, number, number,
-      number, number, number,
-      number, number, number
-    ]
+    number, number, number,
+    number, number, number,
+    number, number, number
+  ]
   | IndexedCollection;
 
 // prettier-ignore
 declare type ReadonlyMat4 =
   | readonly [
-      number, number, number, number,
-      number, number, number, number,
-      number, number, number, number,
-      number, number, number, number
-    ]
+    number, number, number, number,
+    number, number, number, number,
+    number, number, number, number,
+    number, number, number, number
+  ]
   | IndexedCollection;
 
 declare type ReadonlyQuat =
@@ -113,8 +113,9 @@ declare const performance: {
 }
 declare const document: {
   querySelector(selector: string): HTMLCanvasElement
+  addEventListener(type: "keyup" | "keydown", listener: ({ keyCode }) => void)
 }
-declare function fetch (url: string): Promise<Response>;
+declare function fetch(url: string): Promise<Response>;
 declare class Response {
   text(): Promise<string>
 };

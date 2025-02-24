@@ -1,3 +1,3 @@
-import { mainQuickjs } from "./scripts/run.js";
+import { mainQuickjs } from "./scripts/engine.js";
 
 mainQuickjs();

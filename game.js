@@ -1,4 +1,4 @@
 import "adapter"
-import { main } from "./scripts/run.js";
+import { main } from "./scripts/engine.js";
 
 document.addEventListener("load", main);

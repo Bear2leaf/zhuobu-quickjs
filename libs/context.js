@@ -11,6 +11,7 @@ const context = {
     gl: null,
 
 }
+const keyset = new Set();
 const vaos = new Set();
 const vbos = new Set();
 const GLSL_HEADER = `#version 300 es\nprecision highp float;`;
@@ -316,6 +317,7 @@ export function swapBuffers() {
  */
 export function pollEvents() {
     // Implementation of pollEvents
+    keyset.clear();
 }
 
 /**
@@ -326,12 +328,25 @@ export function getTime() {
     // Implementation of getTime
     return performance.now() / 1000; // Return the current time in seconds
 }
-
+/**
+ * 
+ * @param {number} keyCode 
+ * @returns {boolean}
+ */
+export function getKey(keyCode) {
+    return keyset.has(keyCode);
+}
 /**
  * Initialize the library.
  */
 export function initContext() {
     // Implementation of init
+    document.addEventListener("keydown", (event) => {
+        keyset.add(event.keyCode);
+    });
+    document.addEventListener("keyup", (event) => {
+        keyset.delete(event.keyCode);
+    });
 
     /**
      * @type {HTMLCanvasElement | null}
