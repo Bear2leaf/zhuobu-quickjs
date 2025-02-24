@@ -119,6 +119,8 @@ declare function fetch(url: string): Promise<Response>;
 declare class Response {
   text(): Promise<string>
 };
+type EnumValue<T> = T extends { [key: string]: infer U } ? U : never;
+type EnumSet<T> = T extends { [key: string]: infer U } ? Set<U> : never;
 declare class AudioContext implements WechatMinigame.WebAudioContext {
   currentTime: number;
   destination: WechatMinigame.WebAudioContextNode;

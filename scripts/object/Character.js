@@ -9,14 +9,16 @@ export class Character extends MovingObject {
     constructor() {
         super();
         /**
-         * @type {Set<number>}
+         * @type {EnumSet<typeof KeyInput>}
          */
         this.mInputs = new Set();
         /**
-         * @type {Set<number>}
+         * @type {EnumSet<typeof KeyInput>}
          */
         this.mPrevInputs = new Set();
-
+        /**
+         * @type {EnumValue<typeof CharacterState>}
+         */
         this.mCurrentState = CharacterState.Stand;
         this.mJumpSpeed = cJumpSpeed;
         this.mWalkSpeed = cWalkSpeed;
@@ -27,8 +29,8 @@ export class Character extends MovingObject {
     }
     /**
      * 
-     * @param {Set<number>} inputs 
-     * @param {Set<number>} prevInputs 
+     * @param {EnumSet<typeof KeyInput>} inputs 
+     * @param {EnumSet<typeof KeyInput>} prevInputs 
      */
     characterInit(inputs, prevInputs) {
         this.mPosition = this.position;
@@ -141,19 +143,15 @@ export class Character extends MovingObject {
     }
 
     updatePrevInputs() {
-        for (let i = 0; i < KeyInput.Count; ++i) {
-            if (this.mInputs.has(i)) {
-                this.mPrevInputs.add(i);
-            } else {
-                this.mPrevInputs.delete(i);
-            }
-
+        this.mPrevInputs.clear();
+        for (const key of this.mInputs) {
+            this.mPrevInputs.add(key);
         }
     }
 
     /**
      * 
-     * @param {number} key 
+     * @param {EnumValue<typeof KeyInput>} key 
      * @returns {boolean}
      */
     released(key) {
@@ -161,7 +159,7 @@ export class Character extends MovingObject {
     }
     /**
      * 
-     * @param {number} key 
+     * @param {EnumValue<typeof KeyInput>} key 
      * @returns {boolean}
      */
     keyState(key) {
@@ -169,7 +167,7 @@ export class Character extends MovingObject {
     }
     /**
      * 
-     * @param {number} key 
+     * @param {EnumValue<typeof KeyInput>} key 
      * @returns {boolean}
      */
     pressed(key) {

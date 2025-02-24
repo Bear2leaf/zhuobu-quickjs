@@ -26,10 +26,10 @@ let tex2;
 let character;
 
 
-/** @type {Set<number>} */
+/** @type {EnumSet<typeof KeyInput>} */
 const inputs = new Set();
 
-/** @type {Set<number>} */
+/** @type {EnumSet<typeof KeyInput>} */
 const prevInputs = new Set();
 
 export async function load() {
@@ -125,11 +125,36 @@ export function render() {
     uniform1i(getUniformLocation(program, "u_texture2"), 1);
     drawElements(6);
 }
+/**
+ * @type {typeof KeyCodeGLFW | typeof KeyCode}
+ */
+let keys;
 function update() {
 
+    if (getKey(keys.RightKey)) {
+        inputs.add(KeyInput.GoRight)
+    } else {
+        inputs.delete(KeyInput.GoRight)
+    }
+    if (getKey(keys.LeftKey)) {
+        inputs.add(KeyInput.GoLeft);
+    } else {
+        inputs.delete(KeyInput.GoLeft)
+    }
+    if (getKey(keys.DownKey)) {
+        inputs.add(KeyInput.GoDown)
+    } else {
+        inputs.delete(KeyInput.GoDown)
+    }
+    if (getKey(keys.JumpKey)) {
+        inputs.add(KeyInput.Jump);
+    } else {
+        inputs.delete(KeyInput.Jump)
+    }
 }
 let lastTime = getTime();
 export async function mainQuickjs() {
+    keys = KeyCodeGLFW;
     await load();
     init();
     let acc = 0;
@@ -138,26 +163,6 @@ export async function mainQuickjs() {
         const delta = currentTime - lastTime;
         acc += delta;
         lastTime = currentTime;
-        if (getKey(KeyCodeGLFW.RightKey)) {
-            inputs.add(KeyInput.GoRight)
-        } else {
-            inputs.delete(KeyInput.GoRight)
-        }
-        if (getKey(KeyCodeGLFW.LeftKey)) {
-            inputs.add(KeyInput.GoLeft);
-        } else {
-            inputs.delete(KeyInput.GoLeft)
-        }
-        if (getKey(KeyCodeGLFW.DownKey)) {
-            inputs.add(KeyInput.GoDown)
-        } else {
-            inputs.delete(KeyInput.GoDown)
-        }
-        if (getKey(KeyCodeGLFW.JumpKey)) {
-            inputs.add(KeyInput.Jump);
-        } else {
-            inputs.delete(KeyInput.Jump)
-        }
         update();
         while (acc >= 1 / FPS) {
             fixedUpdate(acc);
@@ -170,32 +175,13 @@ export async function mainQuickjs() {
     terminate();
 }
 export async function main() {
+    keys = KeyCode;
     await load();
     init();
     function loop() {
         const currentTime = getTime();
         const delta = currentTime - lastTime;
         lastTime = currentTime;
-        if (getKey(KeyCode.RightKey)) {
-            inputs.add(KeyInput.GoRight)
-        } else {
-            inputs.delete(KeyInput.GoRight)
-        }
-        if (getKey(KeyCode.LeftKey)) {
-            inputs.add(KeyInput.GoLeft);
-        } else {
-            inputs.delete(KeyInput.GoLeft)
-        }
-        if (getKey(KeyCode.DownKey)) {
-            inputs.add(KeyInput.GoDown)
-        } else {
-            inputs.delete(KeyInput.GoDown)
-        }
-        if (getKey(KeyCode.JumpKey)) {
-            inputs.add(KeyInput.Jump);
-        } else {
-            inputs.delete(KeyInput.Jump)
-        }
         update();
         fixedUpdate(delta);
         render();
