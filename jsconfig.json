@@ -4,9 +4,8 @@
         "checkJs": true,
         "target": "ES2015",
         "module": "ES2015",
-        "paths": {
-            "libs/context.so": ["./libs/context.js"]
-        },
-        "lib": ["ES2015"]
-    }
+        "lib": ["ES2015"],
+    },
+    "include": ["scripts", "types.d.ts"]
+
 }

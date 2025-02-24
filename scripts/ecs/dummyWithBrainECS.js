@@ -1,10 +1,9 @@
-import { getTime } from '../../libs/context.so'
 import {
-    createWorld,
+    getTime, createWorld,
     query,
     addEntity,
     addComponent,
-} from '../../bitECS/dist/core/index.mjs'
+} from '../libs.js'
 
 /**
  * @typedef EcsComponents
@@ -66,7 +65,7 @@ const movementSystem = (world) => {
         Position.y[eid] += Velocity.y[eid] * time.delta
         Thought.foo[eid] = `I am at ${Position.x[eid]}, ${Position.y[eid]}`
     }
-    
+
 }
 
 /**
@@ -92,7 +91,7 @@ export const loggerSystem = (world) => {
         console.log(`Entity [${eid}] thinks ${Thought.foo[eid]}`)
     }
 }
-export const updateecs = () => {
+export const dummyWithBrainECS = () => {
     movementSystem(world)
     timeSystem(world)
     loggerSystem(world)

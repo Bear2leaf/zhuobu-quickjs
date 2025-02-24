@@ -6,3 +6,13 @@ a.out
 .obj
 .DS_Store
 project.private.config.json
+quickjs/hello.c
+.gitignore
+quickjs/qjs
+quickjs/qjsc
+quickjs/qjscalc
+quickjs/qjscalc.c
+quickjs/repl.c
+quickjs/run-test262
+quickjs/examples/hello
+quickjs/examples/hello_module

@@ -105,8 +105,19 @@ declare var window: {
 declare module "polyline-normals" {
   export default function getNormals(points: number[][]): [[number, number], number][];
 }
-
-
+declare const console: {
+  log: (...args: any[]) => void
+}
+declare const performance: {
+  now(): number
+}
+declare const document: {
+  querySelector(selector: string): HTMLCanvasElement
+}
+declare function fetch (url: string): Promise<Response>;
+declare class Response {
+  text(): Promise<string>
+};
 declare class AudioContext implements WechatMinigame.WebAudioContext {
   currentTime: number;
   destination: WechatMinigame.WebAudioContextNode;

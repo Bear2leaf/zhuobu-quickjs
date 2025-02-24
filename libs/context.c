@@ -14,8 +14,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 
 // settings
-const unsigned int width = 400;
-const unsigned int height = 400;
+unsigned int width = 400;
+unsigned int height = 400;
 
 
 // process all input: query GLFW whether relevant keys are pressed/released this
@@ -29,15 +29,21 @@ void processInput(GLFWwindow* window) {
 // glfw: whenever the window size changed (by OS or user resize) this callback
 // function executes
 // ---------------------------------------------------------------------------------------------
-void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+void framebuffer_size_callback(GLFWwindow* window, int newWidth, int newHeight) {
     // make sure the viewport matches the new window dimensions; note that width
     // and height will be significantly larger than specified on retina displays.
-    glViewport(0, 0, width, height);
+    width = newWidth;
+    height = newHeight;
 }
 
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
 
 GLFWwindow* window;
+
+
+static JSValue js_resize() {
+    glViewport(0, 0, width, height);
+}
 
 static JSValue js_loadImage(JSContext* ctx,
     JSValueConst this_val,
@@ -591,6 +597,7 @@ static const JSCFunctionListEntry js_context_funcs[] = {
     JS_CFUNC_DEF("bindTexture", 1, js_bindTexture),
     JS_CFUNC_DEF("updateTexture", 1, js_updateTexture),
     JS_CFUNC_DEF("activeTexture", 1, js_activeTexture),
+    JS_CFUNC_DEF("resize", 0, js_resize),
 };
 
 

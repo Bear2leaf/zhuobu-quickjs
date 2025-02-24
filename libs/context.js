@@ -1,6 +1,5 @@
 "use strict";
 
-import { mat4, vec2, vec3, vec4 } from "./gl-matrix/index.js";
 /**
  * The context object.
  * @type {{
@@ -371,7 +370,15 @@ export function getScreenHeight() {
     return window.innerHeight; // Return the screen height
 }
 
-
+export function resize() {
+    const gl = context.gl;
+    const canvas = gl.canvas;
+    if (canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+}
 /**
  * 
  * @param {string} url 

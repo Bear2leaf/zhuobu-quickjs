@@ -1,6 +1,6 @@
-import { clearColor, clear, createShaderProgram, useProgram, createBuffer, bindVBO, bufferData, createVAO, bindVAO, bindEBO, setVertexAttributePointer, enableVertexAttribute, drawElements, bufferDataElement, getUniformLocation, uniformMatrix4fv, getTime, uniform1f, uniform4f, loadText, loadImage, uniform1i, createTexture, bindTexture, updateTexture, initContext, activeTexture } from "../libs/context.so";
-import { mat4 } from "../libs/gl-matrix/index.js";
-import { updateecs } from "./ecs/testecs.js";
+import { dummyWithBrainECS } from "./ecs/dummyWithBrainECS.js";
+import { loadText, loadImage, initContext, clearColor, createShaderProgram, useProgram, createVAO, createBuffer, bindVAO, bindVBO, bufferData, bindEBO, bufferDataElement, setVertexAttributePointer, enableVertexAttribute, createTexture, activeTexture, bindTexture, updateTexture, mat4, resize, getScreenWidth, getScreenHeight, uniformMatrix4fv, getUniformLocation, uniform1f, getTime, uniform1i, clear, drawElements } from "./libs.js";
+
 
 
 /** @type {WebGLProgram}*/
@@ -38,11 +38,12 @@ export function init() {
     const vbo = createBuffer();
     const ebo = createBuffer();
     bindVAO(vao);
+    dummyWithBrainECS();
     const position = new Float32Array([
-        0.5, 0.5, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0,
-        0.5, -0.5, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-        -0.5, -0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-        -0.5, 0.5, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0
+        8, 8, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0,
+        8, -8, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
+        -8, -8, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+        -8, 8, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0
     ]);
     bindVBO(vbo);
     bufferData(position);
@@ -69,13 +70,21 @@ export function init() {
 
 }
 const m = mat4.create();
+const zoom = 10;
 export function update() {
     if (!program) throw new Error("Program not initialized");
-    updateecs();
+    resize();
+    // updateecs();
     mat4.identity(m)
-    uniformMatrix4fv(getUniformLocation(program, "u_model"), false, m);
-    uniformMatrix4fv(getUniformLocation(program, "u_view"), false, m);
+    mat4.ortho(m, 0, getScreenWidth(), getScreenHeight(), 0, -1, 1);
     uniformMatrix4fv(getUniformLocation(program, "u_projection"), false, m);
+    mat4.identity(m);
+    const viewOffset = [-getScreenWidth() / 2, -getScreenHeight() / 2];
+    mat4.lookAt(m, [...viewOffset, 1], [...viewOffset, 0], [0, 1, 0]);
+    uniformMatrix4fv(getUniformLocation(program, "u_view"), false, m);
+    mat4.identity(m)
+    mat4.scale(m, m, [zoom, zoom, 1]);
+    uniformMatrix4fv(getUniformLocation(program, "u_model"), false, m);
     uniform1f(getUniformLocation(program, "u_time"), getTime());
     bindTexture(tex1);
     uniform1i(getUniformLocation(program, "u_texture1"), 0);

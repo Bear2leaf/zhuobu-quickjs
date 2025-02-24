@@ -1,4 +1,4 @@
-import { getTime, initContext, pollEvents, shouldCloseWindow, swapBuffers, terminate } from "../libs/context.so";
+import { getTime, initContext, pollEvents, shouldCloseWindow, swapBuffers, terminate } from "./libs.js";
 import { init, update, render, load } from "./engine.js";
 
 
