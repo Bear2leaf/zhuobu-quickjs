@@ -1,5 +1,7 @@
 "use strict";
 
+import { cacheUniformLocation, programCache } from "../scripts/engine.js";
+
 /**
  * The context object.
  * @type {{
@@ -15,7 +17,6 @@ const keyset = new Set();
 const vaos = new Set();
 const vbos = new Set();
 const GLSL_HEADER = `#version 300 es\nprecision highp float;`;
-
 /**
  * Load text from a file.
  * @param {string} filename - The name of the file to load.
@@ -65,7 +66,6 @@ export function createShaderProgram(vertexShaderSource, fragmentShaderSource) {
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
         throw new Error(gl.getProgramInfoLog(program) ?? "Failed to link shader program");
     }
-
     return program;
 }
 
@@ -182,14 +182,11 @@ export function drawElements(count) {
 
 /**
  * Use a shader program.
- * @param {WebGLProgram} program - The shader program ID.
+ * @param {WebGLProgram} program - The shader program.
  */
 export function useProgram(program) {
-    // Implementation of useProgram
-
     context.gl.useProgram(program);
 }
-
 /**
  * 
  * @param {WebGLProgram} program 
@@ -197,11 +194,11 @@ export function useProgram(program) {
  * @returns {WebGLUniformLocation}
  */
 export function getUniformLocation(program, name) {
-    const loc = context.gl.getUniformLocation(program, name);
-    if (!loc) {
+    const location = context.gl.getUniformLocation(program, name);
+    if (!location) {
         throw new Error(`Failed to get uniform location for ${name}`);
     }
-    return loc;
+    return location;
 }
 
 
@@ -439,6 +436,10 @@ export function bindTexture(texture) {
 export function updateTexture(image) {
     const gl = context.gl;
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image.data);
     gl.generateMipmap(gl.TEXTURE_2D);
 }

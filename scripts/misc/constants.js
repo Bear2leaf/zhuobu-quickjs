@@ -8,3 +8,4 @@ export const cHalfSizeY = 20.0;
 export const cHalfSizeX = 6.0;
 
 export const cWalkSfxTime = 0.5;
+export const cTileSize = 16;

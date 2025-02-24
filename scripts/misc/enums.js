@@ -9,7 +9,6 @@ export const KeyInput = Object.freeze({
     GoRight: 1,
     GoDown: 2,
     Jump: 3,
-    Count: 4,
 });
 export const KeyCode = Object.freeze({
 
@@ -24,4 +23,9 @@ export const KeyCodeGLFW = Object.freeze({
     LeftKey: 263,
     DownKey: 264,
     JumpKey: 32,
+})
+export const TileType = Object.freeze({
+    Empty: 0,
+    Block: 1,
+    OneWay: 2
 })

@@ -6,5 +6,5 @@ uniform sampler2D u_texture2;
 
 out vec4 o_color;
 void main() {
-    o_color = mix(vec4(v_color, 1.0), mix(texture(u_texture1, v_texcoord), texture(u_texture2, v_texcoord), 0.2), 0.5);
+    o_color = mix(vec4(v_color, 1.0), mix(texture(u_texture1, v_texcoord), texture(u_texture2, v_texcoord), 0.2), 0.9);
 }
