@@ -8,26 +8,21 @@ const mh = 60;
  * @type {Readonly<EnumValue<typeof TileType>[]>}
  */
 const mapData = Object.freeze(new Array(mw * mh).fill(TileType.Empty).map((tile, index) => {
-    if (Math.floor(index / mw) < 10 || Math.random() < 0.1) {
+    if (Math.floor(index / mw) < 10) {
         return TileType.Block;
+    } else if (Math.floor(index / mw) < 50) {
+        return Math.random() < 0.01 ? TileType.OneWay : Math.random() < 0.1 ? TileType.Block : TileType.Empty;
     }
     return TileType.Empty;
 }));
 const spritesData = Object.freeze(mapData.map((tile) => {
-    switch (tile) {
-        case TileType.Block:
-            return new SpriteRenderer();
-        case TileType.OneWay:
-            return new SpriteRenderer();
-        case TileType.Empty:
-            return null;
-    }
+    return new SpriteRenderer(tile);
 }));
 export class Map {
     constructor() {
         /** @type {Readonly<EnumValue<typeof TileType>[]>} */
         this.mTiles = mapData;
-        /** @type {Readonly<(SpriteRenderer|null)[]>} */
+        /** @type {Readonly<(SpriteRenderer)[]>} */
         this.mTIlesSprites = spritesData;
 
         this.mPosition = vec3.create();

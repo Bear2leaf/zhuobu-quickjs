@@ -1,7 +1,7 @@
 import { Animator } from "../component/Animator.js";
 import { AudioSource } from "../component/AudioSource.js";
 import { vec2 } from "../libs.js";
-import { cGravity, cHalfSizeX, cHalfSizeY, cJumpSpeed, cMaxFallingSpeed, cMinJumpSpeed, cWalkSfxTime, cWalkSpeed } from "../misc/constants.js";
+import { cGravity, cHalfSizeX, cHalfSizeY, cJumpSpeed, cMaxFallingSpeed, cMinJumpSpeed, cOneWayPlatformThreshold, cWalkSfxTime, cWalkSpeed } from "../misc/constants.js";
 import { CharacterState, KeyInput } from "../misc/enums.js";
 import { AudioClip } from "./AudioClip.js";
 import { MovingObject } from "./MovingObject.js";
@@ -61,6 +61,10 @@ export class Character extends MovingObject {
                     this.mCurrentState = CharacterState.Jump;
                     break;
                 }
+                if (this.keyState(KeyInput.GoDown)) {
+                    if (this.mOnOneWayPlatform)
+                        this.mPosition[1] -= cOneWayPlatformThreshold;
+                }
                 break;
             case CharacterState.Walk:
                 if (this.keyState(KeyInput.GoRight) === this.keyState(KeyInput.GoLeft)) {
@@ -88,6 +92,10 @@ export class Character extends MovingObject {
                 } else if (!this.mOnGround) {
                     this.mCurrentState = CharacterState.Jump;
                     break;
+                }
+                if (this.keyState(KeyInput.GoDown)) {
+                    if (this.mOnOneWayPlatform)
+                        this.mPosition[1] -= cOneWayPlatformThreshold;
                 }
                 break;
             case CharacterState.Jump:

@@ -50,14 +50,14 @@ export async function load() {
     image1 = await loadImage("resources/image/container.jpg");
     image2 = await loadImage("resources/image/awesomeface.png");
     imageTile1 = await loadImage("resources/image/block.png");
-    imageTile2 = await loadImage("resources/image/awesomeface.png");
+    imageTile2 = await loadImage("resources/image/small-platform.png");
 }
 
 const position = new Float32Array([
-    cHalfSizeX * 2, cHalfSizeY * 2, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0,
-    cHalfSizeX * 2, 0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-    0, 0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-    0, cHalfSizeY * 2, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0
+    cHalfSizeX, cHalfSizeY, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0,
+    cHalfSizeX, -cHalfSizeY, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
+    -cHalfSizeX, -cHalfSizeY, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+    -cHalfSizeX, cHalfSizeY, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0
 ]);
 const positionTile = new Float32Array([
     +cTileSize / 2, +cTileSize / 2, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0,
@@ -127,7 +127,7 @@ export function init() {
     updateTexture(imageTile1);
     activeTexture(1);
     bindTexture(texTile2);
-    updateTexture(imageTile2);
+    updateTexture(image2);
 
 }
 const m = mat4.create();
@@ -169,7 +169,7 @@ function getProgram(name) {
 export function render() {
     resize();
     clear();
-    const program= "demo";
+    const program = "demo";
     useProgram(getProgram(program));
     mat4.identity(m)
     mat4.ortho(m, 0, getScreenWidth(), 0, getScreenHeight(), 1, -1);
@@ -192,10 +192,13 @@ export function render() {
     uniform1i(getUniformLocationCached(program, "u_texture2"), 1);
     for (let i = 0; i < character.mMap.mWidth; i++) {
         for (let j = 0; j < character.mMap.mHeight; j++) {
-            if (character.mMap.mTIlesSprites[j * character.mMap.mWidth + i] === null) continue;
+            if (!character.mMap.mTIlesSprites[j * character.mMap.mWidth + i].unit) continue;
             mat4.identity(m)
             mat4.translate(m, m, [...character.mMap.getMapTilePosition(i, j), 0]);
             uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, m);
+            activeTexture(0);
+            bindTexture(character.mMap.mTIlesSprites[j * character.mMap.mWidth + i].unit === TileType.Block ? texTile1 : texTile2);
+            uniform1i(getUniformLocationCached(program, "u_texture1"), 0);
             drawElements(6);
         }
     }
@@ -203,7 +206,7 @@ export function render() {
 
     bindVAO(vao);
     mat4.identity(m)
-    mat4.translate(m, m, [character.position[0], character.position[1], 0]);
+    mat4.translate(m, m, [character.position[0] + character.mAABBOffset[0], character.position[1] + character.mAABBOffset[1], 0]);
     uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, m);
     uniform1f(getUniformLocationCached(program, "u_time"), 0);
     activeTexture(0);
