@@ -1,4 +1,5 @@
 import { vec2 } from "../libs.js";
+import { sign } from "../misc/math.js";
 
 export class AABB {
     get halfSize() {
@@ -37,9 +38,10 @@ export class AABB {
         if (this.halfSize[0] === 0.0 || this.halfSize[1] === 0.0 || other.halfSize[0] === 0.0 || other.halfSize[1] === 0.0
             || Math.abs(this.center[0] - other.center[0]) > this.halfSize[0] + other.halfSize[0]
             || Math.abs(this.center[1] - other.center[1]) > this.halfSize[1] + other.halfSize[1]) return false;
-        vec2.set(out.overlap, Math.sign(this.center[0] - other.center[0]) * ((other.halfSize[0] + this.halfSize[0]) - Math.abs(this.center[0] - other.center[0])),
-            Math.sign(this.center[1] - other.center[1]) * ((other.halfSize[1] + this.halfSize[1]) - Math.abs(this.center[1] - other.center[1])));
+        out.overlap[0] = sign(this.center[0] - other.center[0]) * ((other.halfSize[0] + this.halfSize[0]) - Math.abs(this.center[0] - other.center[0]));
+        out.overlap[1] = sign(this.center[1] - other.center[1]) * ((other.halfSize[1] + this.halfSize[1]) - Math.abs(this.center[1] - other.center[1]));
         return true;
     }
 }
+
 

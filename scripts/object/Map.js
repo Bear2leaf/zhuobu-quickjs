@@ -52,9 +52,9 @@ export class Map {
                 for (let i = 0; i < objectsInArea.length - 1; ++i) {
                     const obj1 = objectsInArea[i];
                     for (let j = i + 1; j < objectsInArea.length; ++j) {
-                        var obj2 = objectsInArea[j];
+                        const obj2 = objectsInArea[j];
                         if (obj1.mAABB.overlapsSigned(obj2.mAABB, out) && !obj1.hasCollisionDataFor(obj2)) {
-                            obj1.mAllCollidingObjects.push(new CollisionData(obj2, vec2.clone(out.overlap), obj1.mSpeed, obj2.mSpeed, obj1.mOldPosition, obj2.mOldPosition, obj1.mPosition, obj2.mPosition));
+                            obj1.mAllCollidingObjects.push(new CollisionData(obj2, out.overlap, obj1.mSpeed, obj2.mSpeed, obj1.mOldPosition, obj2.mOldPosition, obj1.mPosition, obj2.mPosition));
                             obj2.mAllCollidingObjects.push(new CollisionData(obj1, [-out.overlap[0], -out.overlap[1]], obj2.mSpeed, obj1.mSpeed, obj2.mOldPosition, obj1.mOldPosition, obj2.mPosition, obj1.mPosition));
                         }
                     }

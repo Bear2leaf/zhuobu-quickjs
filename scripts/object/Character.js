@@ -3,6 +3,7 @@ import { AudioSource } from "../component/AudioSource.js";
 import { vec2 } from "../libs.js";
 import { cGrabLedgeEndY, cGrabLedgeStartY, cGrabLedgeTileOffsetY, cGravity, cHalfSizeX, cHalfSizeY, cJumpFramesThreshold, cJumpSpeed, cMaxFallingSpeed, cMinJumpSpeed, cOneWayPlatformThreshold, cTileSize, cWalkSfxTime, cWalkSpeed } from "../misc/constants.js";
 import { CharacterState, KeyInput, ObjectType, TileType } from "../misc/enums.js";
+import { sign } from "../misc/math.js";
 import { AudioClip } from "./AudioClip.js";
 import { Map } from "./Map.js";
 import { MovingObject } from "./MovingObject.js";
@@ -36,25 +37,6 @@ export class Character extends MovingObject {
         this.mFramesFromJumpStart = 0;
     }
     customUpdate() {
-        this.characterUpdate();
-    }
-    /**
-     * 
-     * @param {EnumSet<typeof KeyInput>} inputs 
-     * @param {EnumSet<typeof KeyInput>} prevInputs 
-     */
-    characterInit(inputs, prevInputs) {
-        this.mPosition = this.position;
-        this.mAABB.halfSize = [cHalfSizeX, cHalfSizeY];
-        this.aabbOffset = [0, this.mAABB.halfSize[1]];
-        this.mInputs = inputs;
-        this.mPrevInputs = prevInputs;
-
-        this.mJumpSpeed = cJumpSpeed;
-        this.mWalkSpeed = cWalkSpeed;
-
-    }
-    characterUpdate() {
         if (this.keyState(KeyInput.ScaleUp)) {
             this.scale = vec2.fromValues(2, 2);
         } else if (this.keyState(KeyInput.ScaleDown)) {
@@ -64,7 +46,7 @@ export class Character extends MovingObject {
             case CharacterState.Stand:
                 this.mAnimator.play("Stand");
                 vec2.zero(this.mSpeed);
-                if (!this.mOnGround) {
+                if (!this.mPushesBottom) {
                     this.mCurrentState = CharacterState.Jump;
                     break;
                 }
@@ -86,14 +68,14 @@ export class Character extends MovingObject {
                     this.mCurrentState = CharacterState.Stand;
                     vec2.zero(this.mSpeed);
                 } else if (this.keyState(KeyInput.GoRight)) {
-                    if (this.mPushesRightWall)
+                    if (this.mPushesRight)
                         this.mSpeed[0] = 0.0;
                     else
                         this.mSpeed[0] = this.mWalkSpeed;
 
                     this.scale[0] = Math.abs(this.scale[0]);
                 } else if (this.keyState(KeyInput.GoLeft)) {
-                    if (this.mPushesLeftWall)
+                    if (this.mPushesLeft)
                         this.mSpeed[0] = 0.0;
                     else
                         this.mSpeed[0] = -this.mWalkSpeed;
@@ -104,7 +86,7 @@ export class Character extends MovingObject {
                     this.mAudioSource.playOneShot(this.mJumpSfx, 1.0);
                     this.mCurrentState = CharacterState.Jump;
                     break;
-                } else if (!this.mOnGround) {
+                } else if (!this.mPushesBottom) {
                     this.mCurrentState = CharacterState.Jump;
                     break;
                 }
@@ -132,13 +114,13 @@ export class Character extends MovingObject {
                 if (this.keyState(KeyInput.GoRight) === this.keyState(KeyInput.GoLeft)) {
                     this.mSpeed[0] = 0.0;
                 } else if (this.keyState(KeyInput.GoRight)) {
-                    if (this.mPushesRightWall)
+                    if (this.mPushesRight)
                         this.mSpeed[0] = 0.0;
                     else
                         this.mSpeed[0] = this.mWalkSpeed;
                     this.scale[0] = -Math.abs(this.scale[0]);
                 } else if (this.keyState(KeyInput.GoLeft)) {
-                    if (this.mPushesLeftWall)
+                    if (this.mPushesLeft)
                         this.mSpeed[0] = 0.0;
                     else
                         this.mSpeed[0] = -this.mWalkSpeed;
@@ -154,7 +136,7 @@ export class Character extends MovingObject {
                 }
 
                 //if we hit the ground 
-                if (this.mOnGround) {
+                if (this.mPushesBottom) {
                     //if there's no movement change state to standing 
                     if (this.mInputs.has(KeyInput.GoRight) === this.mInputs.has(KeyInput.GoLeft)) {
                         this.mCurrentState = CharacterState.Stand;
@@ -169,16 +151,16 @@ export class Character extends MovingObject {
                     }
                 } else if (this.mSpeed[1] <= 0.0
                     && !this.mAtCeiling
-                    && ((this.mPushesRightWall && this.keyState(KeyInput.GoRight)) || (this.mPushesLeftWall && this.keyState(KeyInput.GoLeft)))) {
+                    && ((this.mPushesRight && this.keyState(KeyInput.GoRight)) || (this.mPushesLeft && this.keyState(KeyInput.GoLeft)))) {
                     const aabbCornerOffset = vec2.create();
-                    if (this.mPushesRightWall && this.mInputs.has(KeyInput.GoRight))
+                    if (this.mPushesRight && this.mInputs.has(KeyInput.GoRight))
                         vec2.copy(aabbCornerOffset, this.mAABB.halfSize);
                     else
                         vec2.set(aabbCornerOffset, -this.mAABB.halfSize[0] - 1.0, this.mAABB.halfSize[1]);
                     const tileX = this.mMap.getMapTileXAtPoint(this.mAABB.center[0] + aabbCornerOffset[0])
                     let topY;
                     let bottomY;
-                    if ((this.mPushedLeftWall && this.mPushesLeftWall) || (this.mPushedRightWall && this.mPushesRightWall)) {
+                    if ((this.mPushedLeft && this.mPushesLeft) || (this.mPushedRight && this.mPushesRight)) {
                         topY = this.mMap.getMapTileYAtPoint(this.mOldPosition[1] + this.aabbOffset[1] + aabbCornerOffset[1] - cGrabLedgeStartY);
                         bottomY = this.mMap.getMapTileYAtPoint(this.mAABB.center[1] + aabbCornerOffset[1] - cGrabLedgeEndY);
                     }
@@ -190,7 +172,7 @@ export class Character extends MovingObject {
                         if (!this.mMap.isObstacle(tileX, y)
                             && this.mMap.isObstacle(tileX, y - 1)) {
                             var tileCorner = this.mMap.getMapTilePosition(tileX, y - 1);
-                            tileCorner[0] -= Math.sign(aabbCornerOffset[0]) * cTileSize / 2;
+                            tileCorner[0] -= sign(aabbCornerOffset[0]) * cTileSize / 2;
                             tileCorner[1] += cTileSize / 2;
                             if (y > bottomY ||
                                 ((this.mAABB.center[1] + aabbCornerOffset[1]) - tileCorner[1] <= cGrabLedgeEndY
@@ -223,14 +205,30 @@ export class Character extends MovingObject {
                 break;
         }
         this.updatePhysics();
-        if (this.mWasOnGround && !this.mOnGround)
+        if (this.mPushedBottom && !this.mPushesBottom)
             this.mFramesFromJumpStart = 0;
-        if ((!this.mWasOnGround && this.mOnGround)
-            || (!this.mWasAtCeiling && this.mAtCeiling)
-            || (!this.mPushedLeftWall && this.mPushesLeftWall)
-            || (!this.mPushedRightWall && this.mPushesRightWall))
+        if ((!this.mPushedBottom && this.mPushesBottom)
+            || (!this.mPushedTop && this.mAtCeiling)
+            || (!this.mPushedLeft && this.mPushesLeft)
+            || (!this.mPushedRight && this.mPushesRight))
             this.mAudioSource.playOneShot(this.mHitWallSfx, 0.5);
         this.updatePrevInputs();
+    }
+    /**
+     * 
+     * @param {EnumSet<typeof KeyInput>} inputs 
+     * @param {EnumSet<typeof KeyInput>} prevInputs 
+     */
+    init(inputs, prevInputs) {
+        this.mPosition = this.position;
+        this.mAABB.halfSize = [cHalfSizeX, cHalfSizeY];
+        this.aabbOffset = [0, this.mAABB.halfSize[1]];
+        this.mInputs = inputs;
+        this.mPrevInputs = prevInputs;
+
+        this.mJumpSpeed = cJumpSpeed;
+        this.mWalkSpeed = cWalkSpeed;
+
     }
 
     updatePrevInputs() {

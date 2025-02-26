@@ -13,14 +13,14 @@ export class CollisionData {
      * @param {vec2} pos1 
      * @param {vec2} pos2 
      **/
-    constructor(other, overlap = vec2.create(), speed1 = vec2.create(), speed2 = vec2.create(), oldPos1 = vec2.create(), oldPos2 = vec2.create(), pos1 = vec2.create(), pos2 = vec2.create()) {
+    constructor(other, overlap, speed1, speed2, oldPos1, oldPos2, pos1, pos2) {
         this.other = other;
-        this.overlap = overlap;
-        this.speed1 = speed1;
-        this.speed2 = speed2;
-        this.oldPos1 = oldPos1;
-        this.oldPos2 = oldPos2;
-        this.pos1 = pos1;
-        this.pos2 = pos2;
+        this.overlap = vec2.clone(overlap);
+        this.speed1 = vec2.clone(speed1);
+        this.speed2 = vec2.clone(speed2);
+        this.oldPos1 = vec2.clone(oldPos1);
+        this.oldPos2 = vec2.clone(oldPos2);
+        this.pos1 = vec2.clone(pos1);
+        this.pos2 = vec2.clone(pos2);
     }
 }

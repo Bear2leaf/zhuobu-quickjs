@@ -75,20 +75,20 @@ export function init() {
     initContext();
     {
         const o = new Character(map);
-        o.characterInit(new Set, new Set);
+        o.init(new Set, new Set);
         o.mType = ObjectType.NPC;
         mObjects.push(o);
     }
     {
         const o = new Character(map);
-        o.characterInit(new Set, new Set);
+        o.init(new Set, new Set);
         o.mType = ObjectType.NPC;
         o.mPosition[0] = 100;   
         mObjects.push(o);
     }
     character = new Character(map);
     mObjects.push(character);
-    character.characterInit(inputs, prevInputs);
+    character.init(inputs, prevInputs);
     character.mType = ObjectType.Player;
     clearColor(0.5, 1, 0.5, 1.0);
     const program = createShaderProgram(vertexShaderSource, fragmentShaderSource);
@@ -162,14 +162,15 @@ export function fixedUpdate(delta) {
                 mObjects[i].deltaTime = delta;
                 mObjects[i].customUpdate();
                 map.updateAreas(mObjects[i]);
-                if (mObjects[i].mAllCollidingObjects.length > 0) {
-                    console.log(`Collision detected for ${mObjects[i].mType}, [${mObjects[i].mAllCollidingObjects.map(o => o.other.mType).join(", ")}]`);
-                }
                 mObjects[i].mAllCollidingObjects.splice(0, mObjects[i].mAllCollidingObjects.length);
                 break;
         }
     }
     map.checkCollisions();
+
+    for (const element of mObjects) {
+        element.updatePhysicsP2();
+    }
 }
 /**
  * 
