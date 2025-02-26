@@ -2,8 +2,10 @@ import { AABB } from "./AABB.js";
 import { getScreenHeight, getScreenWidth, getTime, vec2, vec3 } from "../libs.js";
 import { cOneWayPlatformThreshold, cTileSize } from "../misc/constants.js";
 import { Map } from "./Map.js";
-import { ObjectType } from "../misc/enums.js";
+import { ObjectType, TileCollisionType } from "../misc/enums.js";
 import { CollisionData } from "./CollisionData.js";
+import { PositionState } from "./PositionState.js";
+import { sign } from "../misc/math.js";
 
 export class MovingObject {
     get position() {
@@ -27,6 +29,9 @@ export class MovingObject {
 
         this.mOldPosition = vec2.create();
         this.mPosition = vec2.fromValues(getScreenWidth() / 2, getScreenHeight() / 2);
+        this.mRemainder = vec2.fromValues(getScreenWidth() / 2, getScreenHeight() / 2);
+        this.mPS = new PositionState();
+        this.mSticksToSlope = false;
 
         this.mOldSpeed = vec2.create();
         this.mSpeed = vec2.create();
@@ -83,7 +88,249 @@ export class MovingObject {
     }
     customUpdate() {
     }
+    /**
+     * 
+     * @param {{
+     * position: vec2,
+     * topRight: vec2,
+     * bottomLeft: vec2,
+     * state: PositionState,
+     * move: boolean
+     * }} ref
+     * @returns {boolean}
+     */
+    collidesWithTileRight({ position, topRight, bottomLeft, state }) {
+        const topRightTile = this.mMap.getMapTileAtPoint(vec2.fromValues(topRight[0] + 0.5, topRight[1] - 0.5));
+        const bottomLeftTile = this.mMap.getMapTileAtPoint(vec2.fromValues(bottomLeft[0] + 0.5, bottomLeft[1] + 0.5));
+        for (let y = bottomLeftTile[1]; y <= topRightTile[1]; ++y) {
+            const tileCollisionType = this.mMap.getCollisionType(topRightTile[0], y);
 
+            switch (tileCollisionType) {
+                default://slope 
+                    break;
+                case TileCollisionType.Empty:
+                    break;
+                case TileCollisionType.Full:
+                    state.pushesRightTile = true;
+                    vec2.set(state.rightTile, topRightTile[0], y);
+                    return true;
+            }
+        }
+
+        return false;
+    }
+    /**
+     * 
+     * @param {{
+     * position: vec2,
+     * topRight: vec2,
+     * bottomLeft: vec2,
+     * state: PositionState,
+     * move: boolean
+     * }} ref
+     * @returns {boolean}
+     */
+    collidesWithTileLeft({ position, topRight, bottomLeft, state }) {
+        const topRightTile = this.mMap.getMapTileAtPoint(vec2.fromValues(topRight[0] - 0.5, topRight[1] - 0.5));
+        const bottomLeftTile = this.mMap.getMapTileAtPoint(vec2.fromValues(bottomLeft[0] - 0.5, bottomLeft[1] + 0.5));
+        for (let y = bottomLeftTile[1]; y <= topRightTile[1]; ++y) {
+            const tileCollisionType = this.mMap.getCollisionType(bottomLeftTile[0], y);
+
+            switch (tileCollisionType) {
+                default://slope 
+                    break;
+                case TileCollisionType.Empty:
+                    break;
+                case TileCollisionType.Full:
+                    state.pushesLeftTile = true;
+                    vec2.set(state.leftTile, bottomLeftTile[0], y);
+                    return true;
+            }
+        }
+
+        return false;
+    }
+    /**
+     * 
+     * @param {{
+     * position: vec2,
+     * topRight: vec2,
+     * bottomLeft: vec2,
+     * state: PositionState
+     * }} ref
+     * @returns {boolean}
+     */
+    collidesWithTileTop({ position, topRight, bottomLeft, state }) {
+        const topRightTile = this.mMap.getMapTileAtPoint(vec2.fromValues(topRight[0] - 0.5, topRight[1] + 0.5));
+        const bottomleftTile = this.mMap.getMapTileAtPoint(vec2.fromValues(bottomLeft[0] + 0.5, bottomLeft[1] + 0.5));
+        for (let x = bottomleftTile[0]; x <= topRightTile[0]; ++x) {
+            const tileCollisionType = this.mMap.getCollisionType(x, topRightTile[1]);
+
+            switch (tileCollisionType) {
+                default://slope 
+                    break;
+                case TileCollisionType.Empty:
+                    break;
+                case TileCollisionType.Full:
+                    state.pushesTopTile = true;
+                    vec2.set(state.topTile, x, topRightTile[1]);
+                    return true;
+            }
+        }
+
+        return false;
+    }
+    /**
+     * 
+     * @param {{
+     * position: vec2,
+     * topRight: vec2,
+     * bottomLeft: vec2,
+     * state: PositionState
+     * }} ref
+     * @returns {boolean}
+     */
+    collidesWithTileBottom({ position, topRight, bottomLeft, state }) {
+        const topRightTile = this.mMap.getMapTileAtPoint(vec2.fromValues(topRight[0] - 0.5, topRight[1] - 0.5));
+        const bottomleftTile = this.mMap.getMapTileAtPoint(vec2.fromValues(bottomLeft[0] + 0.5, bottomLeft[1] - 0.5));
+        for (let x = bottomleftTile[0]; x <= topRightTile[0]; ++x) {
+            const tileCollisionType = this.mMap.getCollisionType(x, bottomleftTile[1]);
+
+            switch (tileCollisionType) {
+                default://slope 
+                    break;
+                case TileCollisionType.Empty:
+                    break;
+                case TileCollisionType.Full:
+                    state.onOneWayPlatform = false;
+                    state.pushesBottomTile = true;
+                    vec2.set(state.bottomTile, x, bottomleftTile[1]);
+                    return true;
+            }
+        }
+
+        return false;
+    }
+    /**
+     * 
+     * @param {{
+     * position: vec2,
+     * foundObstacleX: boolean,
+     * offset: number,
+     * step: number,
+     * topRight: vec2,
+     * bottomLeft: vec2,
+     * state: PositionState,
+     * move: boolean
+     * }} ref
+     */
+    moveX(ref) {
+        while (!ref.foundObstacleX && ref.offset != 0.0) {
+            ref.offset -= ref.step;
+            if (ref.step > 0.0)
+                ref.foundObstacleX = this.collidesWithTileRight(ref);
+            else
+                ref.foundObstacleX = this.collidesWithTileLeft(ref);
+            if (!ref.foundObstacleX) {
+                ref.position[0] += ref.step;
+                ref.topRight[0] += ref.step;
+                ref.bottomLeft[0] += ref.step;
+                this.collidesWithTileTop(ref);
+                this.collidesWithTileBottom(ref);
+            }
+        }
+    }
+    /**
+     * 
+     * @param {{
+     * position: vec2,
+     * foundObstacleY: boolean,
+     * offset: number,
+     * step: number,
+     * topRight: vec2,
+     * bottomLeft: vec2,
+     * state: PositionState,
+     * move: boolean
+     * }} ref
+     */
+    moveY(ref) {
+        while (!ref.foundObstacleY && ref.offset != 0.0) {
+            ref.offset -= ref.step;
+            if (ref.step > 0.0)
+                ref.foundObstacleY = this.collidesWithTileTop(ref);
+            else
+                ref.foundObstacleY = this.collidesWithTileBottom(ref);
+            if (!ref.foundObstacleY) {
+                ref.position[1] += ref.step;
+                ref.topRight[1] += ref.step;
+                ref.bottomLeft[1] += ref.step;
+                this.collidesWithTileLeft(ref);
+                this.collidesWithTileRight(ref);
+            }
+        }
+    }
+    /**
+     * 
+     * @param {vec2} offset 
+     * @param {vec2} speed 
+     * @param {AABB} aabb 
+     * @param {{
+     * position: vec2,
+     * foundObstacleX: boolean,
+     * foundObstacleY: boolean,
+     * offset: number,
+     * step: number,
+     * topRight: vec2,
+     * bottomLeft: vec2,
+     * state: PositionState,
+     * remainder: vec2,
+     * move: boolean
+     * }} ref
+     * @returns 
+     */
+    move(offset, speed, aabb, ref) {
+        vec2.add(ref.remainder, ref.remainder, offset);
+
+        vec2.copy(ref.topRight, aabb.max());
+        vec2.copy(ref.bottomLeft, aabb.min());
+
+        ref.foundObstacleX = false;
+        ref.foundObstacleY = false;
+        const step = vec2.fromValues(sign(offset[0]), sign(offset[1]));
+        const move = vec2.fromValues(Math.round(ref.remainder[0]), Math.round(ref.remainder[1]));
+        vec2.sub(ref.remainder, ref.remainder, move);
+        if (move[0] == 0.0 && move[1] == 0.0)
+            return;
+        else if (move[0] != 0.0 && move[1] == 0.0) {
+            ref.offset = move[0];
+            ref.step = step[0];
+            this.moveX(ref);
+        }
+        else if (move[1] != 0.0 && move[0] == 0.0) {
+
+            ref.offset = move[1];
+            ref.step = step[1];
+            this.moveY(ref);
+        }
+        else {
+            const speedRatio = Math.abs(speed[1]) / Math.abs(speed[0]);
+            let vertAccum = 0.0;
+            while (!ref.foundObstacleX && !ref.foundObstacleY && (move[0] != 0.0 || move[1] != 0.0)) {
+                vertAccum += sign(step[1]) * speedRatio;
+                ref.offset = step[0];
+                ref.step = step[0];
+                this.moveX(ref);
+                move[0] -= step[0];
+                while (!ref.foundObstacleY && move[1] != 0.0 && (Math.abs(vertAccum) >= 1.0 || move[0] == 0.0)) {
+                    move[1] -= step[1];
+                    vertAccum -= step[1];
+                    ref.offset = step[1];
+                    ref.step = step[1];
+                    this.moveY(ref);
+                }
+            }
+        }
+    }
     updatePhysicsResponse() {
         if (this.mIsKinematic)
             return;
@@ -191,66 +438,69 @@ export class MovingObject {
         vec2.add(this.mAABB.center, this.mPosition, this.aabbOffset);
     }
     updatePhysics() {
+        this.mPS.pushedBottom = this.mPS.pushesBottom;
+        this.mPS.pushedRight = this.mPS.pushesRight;
+        this.mPS.pushedLeft = this.mPS.pushesLeft;
+        this.mPS.pushedTop = this.mPS.pushesTop;
+        this.mPS.pushedBottomTile = this.mPS.pushesBottomTile;
+        this.mPS.pushedLeftTile = this.mPS.pushesLeftTile;
+        this.mPS.pushedRightTile = this.mPS.pushesRightTile;
+        this.mPS.pushedTopTile = this.mPS.pushesTopTile;
+        this.mPS.pushesBottom = this.mPS.pushesLeft = this.mPS.pushesRight = this.mPS.pushesTop =
+            this.mPS.pushesBottomTile = this.mPS.pushesLeftTile = this.mPS.pushesRightTile = this.mPS.pushesTopTile =
+            this.mPS.pushesBottomObject = this.mPS.pushesLeftObject = this.mPS.pushesRightObject = this.mPS.pushesTopObject = this.mPS.onOneWayPlatform = false;
+
+        const ref = {
+            position: this.mPosition,
+            topRight: this.mAABB.max(),
+            bottomLeft: this.mAABB.min(),
+            state: this.mPS,
+            move: false,
+            remainder: this.mRemainder,
+            aabb: this.mAABB,
+            foundObstacleX: false,
+            foundObstacleY: false,
+            offset: 0,
+            step: 0
+        }
+        this.collidesWithTiles(ref);
+        this.mOldSpeed = this.mSpeed;
+        if (this.mPS.pushesBottomTile)
+            this.mSpeed[1] = Math.max(0.0, this.mSpeed[1]);
+        if (this.mPS.pushesTopTile)
+            this.mSpeed[1] = Math.min(0.0, this.mSpeed[1]);
+        if (this.mPS.pushesLeftTile)
+            this.mSpeed[0] = Math.max(0.0, this.mSpeed[0]);
+        if (this.mPS.pushesRightTile)
+            this.mSpeed[0] = Math.min(0.0, this.mSpeed[0]);
         vec2.copy(this.mOldPosition, this.mPosition);
-        vec2.copy(this.mOldSpeed, this.mSpeed);
-
-        this.mPushedBottomTile = this.mPushesBottomTile;
-        this.mPushedRightTile = this.mPushesRightTile;
-        this.mPushedLeftTile = this.mPushesLeftTile;
-        this.mPushedTopTile = this.mPushesTopTile;
-        this.mPushedBottom = this.mPushesBottom;
-        this.mPushedRight = this.mPushesRight;
-        this.mPushedLeft = this.mPushesLeft;
-        this.mPushedTop = this.mPushesTop;
-
-        vec2.scaleAndAdd(this.mPosition, this.mPosition, this.mSpeed, this.deltaTime);
-
-        const out = { groundY: 0, onOneWayPlatform: false, wallX: 0, ceilingY: 0 };
-
-        if (this.mSpeed[1] <= 0.0
-            && this.hasGround(this.mOldPosition, this.mPosition, this.mSpeed, out)) {
-            this.mPosition[1] = out.groundY + this.mAABB.halfSize[1] - this.aabbOffset[1];
-            this.mSpeed[1] = 0.0;
-            this.mPushesBottomTile = true;
-        } else {
-            this.mPushesBottomTile = false;
+        const newPosition = vec2.add(vec2.create(), this.mPosition, vec2.scale(vec2.create(), this.mSpeed, this.deltaTime));
+        const offset = vec2.sub(vec2.create(), newPosition, this.mPosition);
+        if (offset[0] != 0.0 || offset[1] != 0.0) {
+            this.move(offset, this.mSpeed, this.mAABB, ref);
         }
-        if (this.mSpeed[1] >= 0.0
-            && this.hasCeiling(this.mOldPosition, this.mPosition, out)) {
-            this.mPosition[1] = out.ceilingY - this.mAABB.halfSize[1] - this.aabbOffset[1] - 1;
-            this.mSpeed[1] = 0.0;
-            this.mAtCeiling = true;
-        } else {
-            this.mAtCeiling = false;
-        }
-        if (this.mSpeed[0] <= 0.0
-            && this.collidesWithLeftWall(this.mOldPosition, this.mPosition, out)) {
-            const leftWallX = out.wallX;
-            if ((this.mOldPosition[0] + 1) - this.mAABB.halfSize[0] + this.aabbOffset[0] >= leftWallX) {
-                this.mPosition[0] = leftWallX + this.mAABB.halfSize[0] - this.aabbOffset[0];
-                this.mPushesLeftTile = true;
-            }
-            this.mSpeed[0] = Math.max(this.mSpeed[0], 0.0);
-        }
-        else
-            this.mPushesLeftTile = false;
-        if (this.mSpeed[0] >= 0.0
-            && this.collidesWithRightWall(this.mOldPosition, this.mPosition, out)) {
-            const rightWallX = out.wallX;
-            if ((this.mOldPosition[0] - 1) + this.mAABB.halfSize[0] - this.aabbOffset[0] <= rightWallX) {
-                this.mPosition[0] = rightWallX - this.mAABB.halfSize[0] + this.aabbOffset[0];
-                this.mPushesRightTile = true;
-            }
-            this.mSpeed[0] = Math.min(this.mSpeed[0], 0.0);
-        }
-        else
-            this.mPushesRightTile = false;
-
-        this.mOnOneWayPlatform = out.onOneWayPlatform;
-        vec2.add(this.mAABB.center, this.mPosition, this.aabbOffset);
-
+        vec2.copy(this.mAABB.center, this.mPosition);
+        this.mPS.pushesBottom = this.mPS.pushesBottomTile;
+        this.mPS.pushesRight = this.mPS.pushesRightTile;
+        this.mPS.pushesLeft = this.mPS.pushesLeftTile;
+        this.mPS.pushesTop = this.mPS.pushesTopTile;
     }
-
+    /**
+     * 
+     * @param {{
+     * position: vec2,
+     * topRight: vec2,
+     * bottomLeft: vec2,
+     * state: PositionState
+     * move: boolean
+     * }} ref
+     */
+    collidesWithTiles(ref) {
+        this.collidesWithTileTop(ref);
+        this.collidesWithTileBottom(ref);
+        this.collidesWithTileLeft(ref);
+        this.collidesWithTileRight(ref);
+    }
     /**
      * 
      * @param {MovingObject} other 

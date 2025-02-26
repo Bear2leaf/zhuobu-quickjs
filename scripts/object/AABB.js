@@ -42,6 +42,12 @@ export class AABB {
         out.overlap[1] = sign(this.center[1] - other.center[1]) * ((other.halfSize[1] + this.halfSize[1]) - Math.abs(this.center[1] - other.center[1]));
         return true;
     }
+    max() {
+        return vec2.add(vec2.create(), this.center, this.halfSize);
+    }
+    min() {
+        return vec2.sub(vec2.create(), this.center, this.halfSize);
+    }
 }
 
 

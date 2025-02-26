@@ -1,7 +1,7 @@
 import { SpriteRenderer } from "../component/SpriteRenderer.js";
 import { vec2, vec3 } from "../libs.js";
 import { cTileSize } from "../misc/constants.js";
-import { TileType } from "../misc/enums.js";
+import { TileCollisionType, TileType } from "../misc/enums.js";
 import { CollisionData } from "./CollisionData.js";
 import { MovingObject } from "./MovingObject.js";
 const mw = 80;
@@ -42,6 +42,8 @@ export class Map {
         }
         /** @type {vec2[]} */
         this.mOverlappingAreas = [];
+        /** @type {EnumValue<TileCollisionType>[]} */
+        this.mTilesCollision = [];
     }
     checkCollisions() {
         /** @type {{overlap: vec2}} */
@@ -252,5 +254,18 @@ export class Map {
             return false;
         }
         return this.mTiles[y * this.mWidth + x] === TileType.Empty;
+    }
+    /**
+     * 
+     * @param {number} x 
+     * @param {number} y 
+     * @returns {EnumValue<TileCollisionType>}
+     */
+    getCollisionType(x, y) {
+        if (x <= -1 || x >= this.mWidth
+            || y <= -1 || y >= this.mHeight)
+            return TileCollisionType.Empty;
+
+        return this.mTilesCollision[y * this.mWidth + x];
     }
 }
