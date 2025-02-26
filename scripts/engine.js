@@ -1,7 +1,9 @@
 import { loadText, loadImage, initContext, clearColor, createShaderProgram, useProgram, createVAO, createBuffer, bindVAO, bindVBO, bufferData, bindEBO, bufferDataElement, setVertexAttributePointer, enableVertexAttribute, createTexture, activeTexture, bindTexture, updateTexture, mat4, resize, getScreenWidth, getScreenHeight, uniformMatrix4fv, getUniformLocation, uniform1f, getTime, uniform1i, clear, drawElements, pollEvents, shouldCloseWindow, swapBuffers, terminate, getKey } from "./libs.js";
 import { cHalfSizeX, cHalfSizeY, cTileSize } from "./misc/constants.js";
-import { KeyCode, KeyCodeGLFW, KeyInput, TileType } from "./misc/enums.js";
+import { KeyCode, KeyCodeGLFW, KeyInput, ObjectType, TileType } from "./misc/enums.js";
 import { Character } from "./object/Character.js";
+import { MovingObject } from "./object/MovingObject.js";
+import { Map as GameMap } from "./object/Map.js";
 
 
 
@@ -64,10 +66,30 @@ const positionTile = new Float32Array([
     -cTileSize / 2, -cTileSize / 2, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
     -cTileSize / 2, +cTileSize / 2, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0
 ]);
+const m = mat4.create();
+const zoom = 1;
+/** @type {Array<MovingObject>} */
+const mObjects = new Array();
+const map = new GameMap();
 export function init() {
     initContext();
-    character = new Character();
+    {
+        const o = new Character(map);
+        o.characterInit(new Set, new Set);
+        o.mType = ObjectType.NPC;
+        mObjects.push(o);
+    }
+    {
+        const o = new Character(map);
+        o.characterInit(new Set, new Set);
+        o.mType = ObjectType.NPC;
+        o.mPosition[0] = 100;   
+        mObjects.push(o);
+    }
+    character = new Character(map);
+    mObjects.push(character);
     character.characterInit(inputs, prevInputs);
+    character.mType = ObjectType.Player;
     clearColor(0.5, 1, 0.5, 1.0);
     const program = createShaderProgram(vertexShaderSource, fragmentShaderSource);
     programCache.set("demo", program);
@@ -128,16 +150,26 @@ export function init() {
     updateTexture(image2);
 
 }
-const m = mat4.create();
-const zoom = 1;
 /**
  * 
  * @param {number} delta 
  */
 export function fixedUpdate(delta) {
-    character.deltaTime = delta;
-    character.characterUpdate();
-    // updateecs();
+    for (let i = 0; i < mObjects.length; ++i) {
+        switch (mObjects[i].mType) {
+            case ObjectType.Player:
+            case ObjectType.NPC:
+                mObjects[i].deltaTime = delta;
+                mObjects[i].customUpdate();
+                map.updateAreas(mObjects[i]);
+                if (mObjects[i].mAllCollidingObjects.length > 0) {
+                    console.log(`Collision detected for ${mObjects[i].mType}, [${mObjects[i].mAllCollidingObjects.map(o => o.other.mType).join(", ")}]`);
+                }
+                mObjects[i].mAllCollidingObjects.splice(0, mObjects[i].mAllCollidingObjects.length);
+                break;
+        }
+    }
+    map.checkCollisions();
 }
 /**
  * 
@@ -206,18 +238,21 @@ export function render() {
 
 
     bindVAO(vao);
-    mat4.identity(m)
-    mat4.translate(m, m, [character.position[0] + character.aabbOffset[0], character.position[1] + character.aabbOffset[1], 0]);
-    mat4.scale(m, m, [character.scale[0], character.scale[1], 1]);
-    uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, m);
-    uniform1f(getUniformLocationCached(program, "u_time"), 0);
-    activeTexture(0);
-    bindTexture(tex1);
-    uniform1i(getUniformLocationCached(program, "u_texture1"), 0);
-    activeTexture(1);
-    bindTexture(tex2);
-    uniform1i(getUniformLocationCached(program, "u_texture2"), 1);
-    drawElements(6);
+    for (let i = 0; i < mObjects.length; ++i) {
+        const character = mObjects[i];
+        mat4.identity(m)
+        mat4.translate(m, m, [character.position[0] + character.aabbOffset[0], character.position[1] + character.aabbOffset[1], 0]);
+        mat4.scale(m, m, [character.scale[0], character.scale[1], 1]);
+        uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, m);
+        uniform1f(getUniformLocationCached(program, "u_time"), 0);
+        activeTexture(0);
+        bindTexture(tex1);
+        uniform1i(getUniformLocationCached(program, "u_texture1"), 0);
+        activeTexture(1);
+        bindTexture(tex2);
+        uniform1i(getUniformLocationCached(program, "u_texture2"), 1);
+        drawElements(6);
+    }
 }
 /**
  * @type {typeof KeyCodeGLFW | typeof KeyCode}

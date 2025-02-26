@@ -2,12 +2,14 @@ import { Animator } from "../component/Animator.js";
 import { AudioSource } from "../component/AudioSource.js";
 import { vec2 } from "../libs.js";
 import { cGrabLedgeEndY, cGrabLedgeStartY, cGrabLedgeTileOffsetY, cGravity, cHalfSizeX, cHalfSizeY, cJumpFramesThreshold, cJumpSpeed, cMaxFallingSpeed, cMinJumpSpeed, cOneWayPlatformThreshold, cTileSize, cWalkSfxTime, cWalkSpeed } from "../misc/constants.js";
-import { CharacterState, KeyInput, TileType } from "../misc/enums.js";
+import { CharacterState, KeyInput, ObjectType, TileType } from "../misc/enums.js";
 import { AudioClip } from "./AudioClip.js";
+import { Map } from "./Map.js";
 import { MovingObject } from "./MovingObject.js";
 export class Character extends MovingObject {
-    constructor() {
-        super();
+    /** @param {Map} map */
+    constructor(map) {
+        super(map);
         /**
          * @type {EnumSet<typeof KeyInput>}
          */
@@ -33,6 +35,9 @@ export class Character extends MovingObject {
         this.mCannotGoRightFrames = 0;
         this.mFramesFromJumpStart = 0;
     }
+    customUpdate() {
+        this.characterUpdate();
+    }
     /**
      * 
      * @param {EnumSet<typeof KeyInput>} inputs 
@@ -41,7 +46,6 @@ export class Character extends MovingObject {
     characterInit(inputs, prevInputs) {
         this.mPosition = this.position;
         this.mAABB.halfSize = [cHalfSizeX, cHalfSizeY];
-        this.mAABB = this.mAABB;
         this.aabbOffset = [0, this.mAABB.halfSize[1]];
         this.mInputs = inputs;
         this.mPrevInputs = prevInputs;
@@ -49,7 +53,6 @@ export class Character extends MovingObject {
         this.mJumpSpeed = cJumpSpeed;
         this.mWalkSpeed = cWalkSpeed;
 
-        vec2.set(this.scale, 1, 1);
     }
     characterUpdate() {
         if (this.keyState(KeyInput.ScaleUp)) {

@@ -35,3 +35,7 @@ export const TileType = Object.freeze({
     Block: 1,
     OneWay: 2
 })
+export const ObjectType = Object.freeze({
+    Player: 0,
+    NPC: 1,
+})

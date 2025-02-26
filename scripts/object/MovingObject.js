@@ -2,6 +2,8 @@ import { AABB } from "./AABB.js";
 import { getScreenHeight, getScreenWidth, getTime, vec2, vec3 } from "../libs.js";
 import { cOneWayPlatformThreshold, cTileSize } from "../misc/constants.js";
 import { Map } from "./Map.js";
+import { ObjectType } from "../misc/enums.js";
+import { CollisionData } from "./CollisionData.js";
 
 export class MovingObject {
     get position() {
@@ -23,7 +25,8 @@ export class MovingObject {
         this.mScale = vec2.fromValues(value[0], value[1]);
         this.mAABB.scale = [Math.abs(this.mScale[0]), Math.abs(this.mScale[1])];
     }
-    constructor() {
+    /** @param {Map} map */
+    constructor(map) {
 
         this.mOldPosition = vec2.create();
         this.mPosition = vec2.fromValues(getScreenWidth() / 2, getScreenHeight() / 2);
@@ -44,7 +47,20 @@ export class MovingObject {
         this.mWasAtCeiling = false;
         this.mAtCeiling = false;
         this.deltaTime = 0;
-        this.mMap = new Map();
+        this.mMap = map;
+        /** @type {vec2[]} */
+        this.mAreas = [];
+        /** @type {number[]} */
+        this.mIdsInAreas = [];
+        /** @type {EnumValue<ObjectType>} */
+        this.mType = ObjectType.NPC;
+
+        /** @type {CollisionData[]} */
+        this.mAllCollidingObjects = [];
+
+
+    }
+    customUpdate() {
     }
     updatePhysics() {
         vec2.copy(this.mOldPosition, this.mPosition);
@@ -100,6 +116,19 @@ export class MovingObject {
         this.mOnOneWayPlatform = out.onOneWayPlatform;
         vec2.add(this.mAABB.center, this.mPosition, this.aabbOffset);
 
+    }
+
+    /**
+     * 
+     * @param {MovingObject} other 
+     * @returns {boolean}
+     */
+    hasCollisionDataFor(other) {
+        for (let i = 0; i < this.mAllCollidingObjects.length; ++i) {
+            if (this.mAllCollidingObjects[i].other === other)
+                return true;
+        }
+        return false;
     }
     /**
      * 
