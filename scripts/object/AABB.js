@@ -1,9 +1,19 @@
 import { vec2 } from "../libs.js";
 
 export class AABB {
+    get halfSize() {
+        return [
+            this.mHalfSize[0] * this.scale[0],
+            this.mHalfSize[1] * this.scale[1]
+        ];
+    }
+    set halfSize(value) {
+        this.mHalfSize = vec2.fromValues(value[0], value[1]);
+    }
     constructor() {
+        this.scale = vec2.fromValues(1, 1);
         this.center = vec2.create();
-        this.halfSize = vec2.create();
+        this.mHalfSize = vec2.create();
     }
     /**
      * 

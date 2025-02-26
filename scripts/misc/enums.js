@@ -9,6 +9,8 @@ export const KeyInput = Object.freeze({
     GoRight: 1,
     GoDown: 2,
     Jump: 3,
+    ScaleDown: 4,
+    ScaleUp: 5
 });
 export const KeyCode = Object.freeze({
 
@@ -16,6 +18,8 @@ export const KeyCode = Object.freeze({
     LeftKey: 37,
     DownKey: 40,
     JumpKey: 32,
+    Minus: 189,
+    Equal: 187
 })
 
 export const KeyCodeGLFW = Object.freeze({
@@ -23,6 +27,8 @@ export const KeyCodeGLFW = Object.freeze({
     LeftKey: 263,
     DownKey: 264,
     JumpKey: 32,
+    Minus: 45,
+    Equal: 61
 })
 export const TileType = Object.freeze({
     Empty: 0,

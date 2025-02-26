@@ -1,4 +1,3 @@
-import { dummyWithBrainECS } from "./ecs/dummyWithBrainECS.js";
 import { loadText, loadImage, initContext, clearColor, createShaderProgram, useProgram, createVAO, createBuffer, bindVAO, bindVBO, bufferData, bindEBO, bufferDataElement, setVertexAttributePointer, enableVertexAttribute, createTexture, activeTexture, bindTexture, updateTexture, mat4, resize, getScreenWidth, getScreenHeight, uniformMatrix4fv, getUniformLocation, uniform1f, getTime, uniform1i, clear, drawElements, pollEvents, shouldCloseWindow, swapBuffers, terminate, getKey } from "./libs.js";
 import { cHalfSizeX, cHalfSizeY, cTileSize } from "./misc/constants.js";
 import { KeyCode, KeyCodeGLFW, KeyInput, TileType } from "./misc/enums.js";
@@ -77,7 +76,6 @@ export function init() {
     const vbo = createBuffer();
     const ebo = createBuffer();
     bindVAO(vao);
-    dummyWithBrainECS();
     bindVBO(vbo);
     bufferData(position);
     bindEBO(ebo);
@@ -199,6 +197,9 @@ export function render() {
             activeTexture(0);
             bindTexture(character.mMap.mTIlesSprites[j * character.mMap.mWidth + i].unit === TileType.Block ? texTile1 : texTile2);
             uniform1i(getUniformLocationCached(program, "u_texture1"), 0);
+            activeTexture(1);
+            bindTexture(texTile2);
+            uniform1i(getUniformLocationCached(program, "u_texture2"), 1);
             drawElements(6);
         }
     }
@@ -206,7 +207,8 @@ export function render() {
 
     bindVAO(vao);
     mat4.identity(m)
-    mat4.translate(m, m, [character.position[0] + character.mAABBOffset[0], character.position[1] + character.mAABBOffset[1], 0]);
+    mat4.translate(m, m, [character.position[0] + character.aabbOffset[0], character.position[1] + character.aabbOffset[1], 0]);
+    mat4.scale(m, m, [character.scale[0], character.scale[1], 1]);
     uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, m);
     uniform1f(getUniformLocationCached(program, "u_time"), 0);
     activeTexture(0);
@@ -242,6 +244,16 @@ function update() {
         inputs.add(KeyInput.Jump);
     } else {
         inputs.delete(KeyInput.Jump)
+    }
+    if (getKey(keys.Minus)) {
+        inputs.add(KeyInput.ScaleDown);
+    } else {
+        inputs.delete(KeyInput.ScaleDown)
+    }
+    if (getKey(keys.Equal)) {
+        inputs.add(KeyInput.ScaleUp);
+    } else {
+        inputs.delete(KeyInput.ScaleUp)
     }
 }
 let lastTime = getTime();

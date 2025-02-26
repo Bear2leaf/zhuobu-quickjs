@@ -10,6 +10,19 @@ export class MovingObject {
     get localScale() {
         return vec3.fromValues(this.mScale[0], this.mScale[1], 1.0);
     }
+    get aabbOffset() {
+        return vec2.fromValues(this.mAABBOffset[0] * this.mScale[0], this.mAABBOffset[1] * this.mScale[1]);
+    }
+    set aabbOffset(value) {
+        this.mAABBOffset = vec2.fromValues(value[0], value[1]);
+    }
+    get scale() {
+        return vec2.fromValues(this.mScale[0], this.mScale[1]);
+    }
+    set scale(value) {
+        this.mScale = vec2.fromValues(value[0], value[1]);
+        this.mAABB.scale = [Math.abs(this.mScale[0]), Math.abs(this.mScale[1])];
+    }
     constructor() {
 
         this.mOldPosition = vec2.create();
@@ -18,7 +31,7 @@ export class MovingObject {
         this.mOldSpeed = vec2.create();
         this.mSpeed = vec2.create();
 
-        this.mScale = vec2.create();
+        this.mScale = vec2.fromValues(1, 1);
         this.mAABB = new AABB();
         this.mAABBOffset = vec2.create();
         this.mPushedRightWall = false;
@@ -47,7 +60,7 @@ export class MovingObject {
 
         if (this.mSpeed[1] <= 0.0
             && this.hasGround(this.mOldPosition, this.mPosition, this.mSpeed, out)) {
-            this.mPosition[1] = out.groundY + this.mAABB.halfSize[1] - this.mAABBOffset[1];
+            this.mPosition[1] = out.groundY + this.mAABB.halfSize[1] - this.aabbOffset[1];
             this.mSpeed[1] = 0.0;
             this.mOnGround = true;
         } else {
@@ -55,7 +68,7 @@ export class MovingObject {
         }
         if (this.mSpeed[1] >= 0.0
             && this.hasCeiling(this.mOldPosition, this.mPosition, out)) {
-            this.mPosition[1] = out.ceilingY - this.mAABB.halfSize[1] - this.mAABBOffset[1] - 1;
+            this.mPosition[1] = out.ceilingY - this.mAABB.halfSize[1] - this.aabbOffset[1] - 1;
             this.mSpeed[1] = 0.0;
             this.mAtCeiling = true;
         } else {
@@ -64,8 +77,8 @@ export class MovingObject {
         if (this.mSpeed[0] <= 0.0
             && this.collidesWithLeftWall(this.mOldPosition, this.mPosition, out)) {
             const leftWallX = out.wallX;
-            if ((this.mOldPosition[0] + 1) - this.mAABB.halfSize[0] + this.mAABBOffset[0] >= leftWallX) {
-                this.mPosition[0] = leftWallX + this.mAABB.halfSize[0] - this.mAABBOffset[0];
+            if ((this.mOldPosition[0] + 1) - this.mAABB.halfSize[0] + this.aabbOffset[0] >= leftWallX) {
+                this.mPosition[0] = leftWallX + this.mAABB.halfSize[0] - this.aabbOffset[0];
                 this.mPushesLeftWall = true;
             }
             this.mSpeed[0] = Math.max(this.mSpeed[0], 0.0);
@@ -75,8 +88,8 @@ export class MovingObject {
         if (this.mSpeed[0] >= 0.0
             && this.collidesWithRightWall(this.mOldPosition, this.mPosition, out)) {
             const rightWallX = out.wallX;
-            if ((this.mOldPosition[0] - 1) + this.mAABB.halfSize[0] - this.mAABBOffset[0] <= rightWallX) {
-                this.mPosition[0] = rightWallX - this.mAABB.halfSize[0] + this.mAABBOffset[0];
+            if ((this.mOldPosition[0] - 1) + this.mAABB.halfSize[0] - this.aabbOffset[0] <= rightWallX) {
+                this.mPosition[0] = rightWallX - this.mAABB.halfSize[0] + this.aabbOffset[0];
                 this.mPushesRightWall = true;
             }
             this.mSpeed[0] = Math.min(this.mSpeed[0], 0.0);
@@ -85,7 +98,7 @@ export class MovingObject {
             this.mPushesRightWall = false;
 
         this.mOnOneWayPlatform = out.onOneWayPlatform;
-        vec2.add(this.mAABB.center, this.mPosition, this.mAABBOffset);
+        vec2.add(this.mAABB.center, this.mPosition, this.aabbOffset);
 
     }
     /**
@@ -98,9 +111,9 @@ export class MovingObject {
      */
     hasGround(oldPosition, position, speed, out) {
         const oldCenter = vec2.create();
-        vec2.add(oldCenter, oldPosition, this.mAABBOffset);
+        vec2.add(oldCenter, oldPosition, this.aabbOffset);
         const center = vec2.create();
-        vec2.add(center, position, this.mAABBOffset);
+        vec2.add(center, position, this.aabbOffset);
         const oldBottomLeft = vec2.create();
         vec2.sub(oldBottomLeft, oldCenter, this.mAABB.halfSize);
         vec2.sub(oldBottomLeft, oldBottomLeft, vec2.fromValues(0.0, 1.0));
@@ -155,8 +168,8 @@ export class MovingObject {
      * @returns {boolean}
      */
     hasCeiling(oldPosition, position, out) {
-        const center = vec2.add(vec2.create(), position, this.mAABBOffset);
-        const oldCenter = vec2.add(vec2.create(), oldPosition, this.mAABBOffset);
+        const center = vec2.add(vec2.create(), position, this.aabbOffset);
+        const oldCenter = vec2.add(vec2.create(), oldPosition, this.aabbOffset);
         out.ceilingY = 0.0;
         const oldTopRight = vec2.add(vec2.create(), oldCenter, this.mAABB.halfSize);
         vec2.add(oldTopRight, oldTopRight, vec2.fromValues(0.0, 1.0));
@@ -202,8 +215,8 @@ export class MovingObject {
      * @returns {boolean}
      */
     collidesWithLeftWall(oldPosition, position, out) {
-        const center = vec2.add(vec2.create(), position, this.mAABBOffset);
-        const oldCenter = vec2.add(vec2.create(), oldPosition, this.mAABBOffset);
+        const center = vec2.add(vec2.create(), position, this.aabbOffset);
+        const oldCenter = vec2.add(vec2.create(), oldPosition, this.aabbOffset);
         out.wallX = 0.0;
         const oldBottomLeft = vec2.sub(vec2.create(), oldCenter, this.mAABB.halfSize);
         vec2.sub(oldBottomLeft, oldBottomLeft, vec2.fromValues(1.0, 0.0));
@@ -246,8 +259,8 @@ export class MovingObject {
      */
 
     collidesWithRightWall(oldPosition, position, out) {
-        const center = vec2.add(vec2.create(), position, this.mAABBOffset);
-        const oldCenter = vec2.add(vec2.create(), oldPosition, this.mAABBOffset);
+        const center = vec2.add(vec2.create(), position, this.aabbOffset);
+        const oldCenter = vec2.add(vec2.create(), oldPosition, this.aabbOffset);
         out.wallX = 0.0;
         const oldBottomRight = vec2.add(vec2.create(), oldCenter, [this.mAABB.halfSize[0], -this.mAABB.halfSize[1]]);
         vec2.add(oldBottomRight, oldBottomRight, vec2.fromValues(1.0, 0.0));
