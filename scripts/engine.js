@@ -4,6 +4,7 @@ import { KeyCode, KeyCodeGLFW, KeyInput, ObjectType, TileType } from "./misc/enu
 import { Character } from "./object/Character.js";
 import { MovingObject } from "./object/MovingObject.js";
 import { Map as GameMap } from "./object/Map.js";
+import { Slopes } from "./object/Slopes.js";
 
 
 
@@ -73,10 +74,12 @@ const mObjects = new Array();
 const map = new GameMap();
 export function init() {
     initContext();
+    Slopes.init();
     {
         const o = new Character(map);
         o.init(new Set, new Set);
         o.mType = ObjectType.NPC;
+        o.mPosition[0] = 300;   
         mObjects.push(o);
     }
     {

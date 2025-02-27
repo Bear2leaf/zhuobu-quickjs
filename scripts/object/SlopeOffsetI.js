@@ -1,5 +1,4 @@
 import { SlopeOffsetSB } from "./SlopeOffsetSB.js";
-
 export class SlopeOffsetI {
     /**
      * 

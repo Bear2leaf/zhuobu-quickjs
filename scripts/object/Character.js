@@ -29,9 +29,9 @@ export class Character extends MovingObject {
         this.mAudioSource = new AudioSource();
         this.mJumpSfx = new AudioClip();
         this.mHitWallSfx = new AudioClip();
-
+        this.mWalkSfx = new AudioClip();
         this.mLedgeTile = vec2.create();
-
+        this.mWalkSfxTimer = 0.0;
         this.mCannotGoLeftFrames = 0;
         this.mCannotGoRightFrames = 0;
         this.mFramesFromJumpStart = 0;
@@ -46,7 +46,7 @@ export class Character extends MovingObject {
             case CharacterState.Stand:
                 this.mAnimator.play("Stand");
                 vec2.zero(this.mSpeed);
-                if (!this.mPushesBottom) {
+                if (!this.mPS.pushesBottom) {
                     this.mCurrentState = CharacterState.Jump;
                     break;
                 }
@@ -55,50 +55,57 @@ export class Character extends MovingObject {
                     break;
                 } else if (this.keyState(KeyInput.Jump)) {
                     this.mSpeed[1] = this.mJumpSpeed;
+                    this.mAudioSource.playOneShot(this.mJumpSfx, 1.0);
                     this.mCurrentState = CharacterState.Jump;
                     break;
                 }
                 if (this.keyState(KeyInput.GoDown)) {
-                    if (this.mOnOneWayPlatform)
-                        this.mPosition[1] -= cOneWayPlatformThreshold;
+                    this.mPS.tmpIgnoresOneWay = true;
                 }
                 break;
             case CharacterState.Walk:
+                this.mAnimator.play("Walk");
+                this.mWalkSfxTimer += this.deltaTime;
+                
+                if (this.mWalkSfxTimer > cWalkSfxTime)
+                    {
+                        this.mWalkSfxTimer = 0.0;
+                        this.mAudioSource.playOneShot(this.mWalkSfx, 1);
+                    }
                 if (this.keyState(KeyInput.GoRight) === this.keyState(KeyInput.GoLeft)) {
                     this.mCurrentState = CharacterState.Stand;
                     vec2.zero(this.mSpeed);
                 } else if (this.keyState(KeyInput.GoRight)) {
-                    if (this.mPushesRight)
+                    if (this.mPS.pushesRight)
                         this.mSpeed[0] = 0.0;
                     else
                         this.mSpeed[0] = this.mWalkSpeed;
 
-                    this.scale[0] = Math.abs(this.scale[0]);
+                    this.scale[0] = -Math.abs(this.scale[0]);
                 } else if (this.keyState(KeyInput.GoLeft)) {
-                    if (this.mPushesLeft)
+                    if (this.mPS.pushesLeft)
                         this.mSpeed[0] = 0.0;
                     else
                         this.mSpeed[0] = -this.mWalkSpeed;
-                    this.scale[0] = -Math.abs(this.scale[0]);
+                    this.scale[0] = Math.abs(this.scale[0]);
                 }
                 if (this.keyState(KeyInput.Jump)) {
                     this.mSpeed[1] = this.mJumpSpeed;
                     this.mAudioSource.playOneShot(this.mJumpSfx, 1.0);
                     this.mCurrentState = CharacterState.Jump;
                     break;
-                } else if (!this.mPushesBottom) {
+                } else if (!this.mPS.pushesBottom) {
                     this.mCurrentState = CharacterState.Jump;
                     break;
                 }
                 if (this.keyState(KeyInput.GoDown)) {
-                    if (this.mOnOneWayPlatform)
-                        this.mPosition[1] -= cOneWayPlatformThreshold;
+                    this.mPS.tmpIgnoresOneWay = true;
                 }
                 break;
             case CharacterState.Jump:
                 ++this.mFramesFromJumpStart;
                 if (this.mFramesFromJumpStart <= cJumpFramesThreshold) {
-                    if (this.mAtCeiling || this.mSpeed[1] > 0.0)
+                    if (this.mPS.pushesTop || this.mSpeed[1] > 0.0)
                         this.mFramesFromJumpStart = cJumpFramesThreshold + 1;
                     else if (this.keyState(KeyInput.Jump))
                         this.mSpeed[1] = this.mJumpSpeed;
@@ -114,31 +121,22 @@ export class Character extends MovingObject {
                 if (this.keyState(KeyInput.GoRight) === this.keyState(KeyInput.GoLeft)) {
                     this.mSpeed[0] = 0.0;
                 } else if (this.keyState(KeyInput.GoRight)) {
-                    if (this.mPushesRight)
+                    if (this.mPS.pushesRight)
                         this.mSpeed[0] = 0.0;
                     else
                         this.mSpeed[0] = this.mWalkSpeed;
                     this.scale[0] = -Math.abs(this.scale[0]);
                 } else if (this.keyState(KeyInput.GoLeft)) {
-                    if (this.mPushesLeft)
+                    if (this.mPS.pushesLeft)
                         this.mSpeed[0] = 0.0;
                     else
                         this.mSpeed[0] = -this.mWalkSpeed;
                     this.scale[0] = Math.abs(this.scale[0]);
                 }
-                if (this.mCannotGoLeftFrames > 0) {
-                    --this.mCannotGoLeftFrames;
-                    this.mInputs.delete(KeyInput.GoLeft);
-                }
-                if (this.mCannotGoRightFrames > 0) {
-                    --this.mCannotGoRightFrames;
-                    this.mInputs.delete(KeyInput.GoRight);
-                }
-
                 //if we hit the ground 
-                if (this.mPushesBottom) {
+                if (this.mPS.pushesBottom) {
                     //if there's no movement change state to standing 
-                    if (this.mInputs.has(KeyInput.GoRight) === this.mInputs.has(KeyInput.GoLeft)) {
+                    if (this.keyState(KeyInput.GoRight) === this.keyState(KeyInput.GoLeft)) {
                         this.mCurrentState = CharacterState.Stand;
                         vec2.zero(this.mSpeed)
                         this.mAudioSource.playOneShot(this.mHitWallSfx, 0.5);
@@ -149,18 +147,29 @@ export class Character extends MovingObject {
                         this.mSpeed[1] = 0.0;
                         this.mAudioSource.playOneShot(this.mHitWallSfx, 0.5);
                     }
-                } else if (this.mSpeed[1] <= 0.0
-                    && !this.mAtCeiling
-                    && ((this.mPushesRight && this.keyState(KeyInput.GoRight)) || (this.mPushesLeft && this.keyState(KeyInput.GoLeft)))) {
+                }
+
+                if (this.mCannotGoLeftFrames > 0) {
+                    --this.mCannotGoLeftFrames;
+                    this.mInputs.delete(KeyInput.GoLeft);
+                }
+                if (this.mCannotGoRightFrames > 0) {
+                    --this.mCannotGoRightFrames;
+                    this.mInputs.delete(KeyInput.GoRight);
+                }
+
+                if (this.mSpeed[1] <= 0.0
+                    && !this.mPS.pushesTop
+                    && ((this.mPS.pushesRight && this.keyState(KeyInput.GoRight)) || (this.mPS.pushesLeft && this.keyState(KeyInput.GoLeft)))) {
                     const aabbCornerOffset = vec2.create();
-                    if (this.mPushesRight && this.mInputs.has(KeyInput.GoRight))
+                    if (this.mPS.pushesRight && this.keyState(KeyInput.GoRight))
                         vec2.copy(aabbCornerOffset, this.mAABB.halfSize);
                     else
                         vec2.set(aabbCornerOffset, -this.mAABB.halfSize[0] - 1.0, this.mAABB.halfSize[1]);
                     const tileX = this.mMap.getMapTileXAtPoint(this.mAABB.center[0] + aabbCornerOffset[0])
                     let topY;
                     let bottomY;
-                    if ((this.mPushedLeft && this.mPushesLeft) || (this.mPushedRight && this.mPushesRight)) {
+                    if ((this.mPS.pushedLeft && this.mPS.pushesLeft) || (this.mPS.pushedRight && this.mPS.pushesRight)) {
                         topY = this.mMap.getMapTileYAtPoint(this.mOldPosition[1] + this.aabbOffset[1] + aabbCornerOffset[1] - cGrabLedgeStartY);
                         bottomY = this.mMap.getMapTileYAtPoint(this.mAABB.center[1] + aabbCornerOffset[1] - cGrabLedgeEndY);
                     }
@@ -171,7 +180,7 @@ export class Character extends MovingObject {
                     for (let y = topY; y >= bottomY; --y) {
                         if (!this.mMap.isObstacle(tileX, y)
                             && this.mMap.isObstacle(tileX, y - 1)) {
-                            var tileCorner = this.mMap.getMapTilePosition(tileX, y - 1);
+                            const tileCorner = this.mMap.getMapTilePosition(tileX, y - 1);
                             tileCorner[0] -= sign(aabbCornerOffset[0]) * cTileSize / 2;
                             tileCorner[1] += cTileSize / 2;
                             if (y > bottomY ||
@@ -181,36 +190,43 @@ export class Character extends MovingObject {
                                 this.mPosition[1] = tileCorner[1] - aabbCornerOffset[1] - this.aabbOffset[1] - cGrabLedgeStartY + cGrabLedgeTileOffsetY;
                                 vec2.zero(this.mSpeed)
                                 this.mCurrentState = CharacterState.GrabLedge;
+                                this.mAnimator.play("GrabLedge");
+                                this.mAudioSource.playOneShot(this.mHitWallSfx, 0.5);
                                 break;
                             }
                         }
                     }
                 }
+                if (this.keyState(KeyInput.GoDown)) {
+                    this.mPS.tmpIgnoresOneWay = true;
+                }
                 break;
             case CharacterState.GrabLedge:
+                this.mAnimator.play("GrabLedge");
                 const ledgeOnLeft = this.mLedgeTile[0] * cTileSize < this.mPosition[0];
                 const ledgeOnRight = !ledgeOnLeft;
-                if (this.mInputs.has(KeyInput.GoDown)
-                    || (this.mInputs.has(KeyInput.GoLeft) && ledgeOnRight)
-                    || (this.mInputs.has(KeyInput.GoRight) && ledgeOnLeft)) {
+                if (this.keyState(KeyInput.GoDown)
+                    || (this.keyState(KeyInput.GoLeft) && ledgeOnRight)
+                    || (this.keyState(KeyInput.GoRight) && ledgeOnLeft)) {
                     if (ledgeOnLeft)
                         this.mCannotGoLeftFrames = 3;
                     else
                         this.mCannotGoRightFrames = 3;
                     this.mCurrentState = CharacterState.Jump;
-                } else if (this.mInputs.has(KeyInput.Jump)) {
+                } else if (this.keyState(KeyInput.Jump)) {
                     this.mSpeed[1] = this.mJumpSpeed;
+                    this.mAudioSource.playOneShot(this.mJumpSfx, 1.0);
+                    this.mCurrentState = CharacterState.Jump;
+                }
+                if (!this.mMap.isObstacle(this.mLedgeTile[0], this.mLedgeTile[1])) {
                     this.mCurrentState = CharacterState.Jump;
                 }
                 break;
         }
         this.updatePhysics();
-        if (this.mPushedBottom && !this.mPushesBottom)
+        if (this.mPS.pushedBottom && !this.mPS.pushesBottom)
             this.mFramesFromJumpStart = 0;
-        if ((!this.mPushedBottom && this.mPushesBottom)
-            || (!this.mPushedTop && this.mAtCeiling)
-            || (!this.mPushedLeft && this.mPushesLeft)
-            || (!this.mPushedRight && this.mPushesRight))
+        if ((!this.mPS.pushedBottom && this.mPS.pushesBottom))
             this.mAudioSource.playOneShot(this.mHitWallSfx, 0.5);
         this.updatePrevInputs();
     }
@@ -220,11 +236,12 @@ export class Character extends MovingObject {
      * @param {EnumSet<typeof KeyInput>} prevInputs 
      */
     init(inputs, prevInputs) {
+        this.scale = vec2.fromValues(1, 1);
+        this.mInputs = inputs;
+        this.mPrevInputs = prevInputs;
         this.mPosition = this.position;
         this.mAABB.halfSize = [cHalfSizeX, cHalfSizeY];
         this.aabbOffset = [0, this.mAABB.halfSize[1]];
-        this.mInputs = inputs;
-        this.mPrevInputs = prevInputs;
 
         this.mJumpSpeed = cJumpSpeed;
         this.mWalkSpeed = cWalkSpeed;

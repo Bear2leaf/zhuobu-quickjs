@@ -27,6 +27,10 @@ export class PositionState {
         this.pushesBottomTile = false;
         this.pushesTopTile = false;
         this.onOneWayPlatform = false;
+        this.onOneWay = false;
+        this.tmpIgnoresOneWay = false;
+        this.oneWayY = 0;
+
         this.leftTile = vec2.fromValues(-1, -1);
         this.rightTile = vec2.fromValues(-1, -1);
         this.topTile = vec2.fromValues(-1, -1);
@@ -62,5 +66,8 @@ export class PositionState {
         this.pushesBottomTile = false;
         this.pushesTopTile = false;
         this.onOneWayPlatform = false;
+        this.onOneWay = false;
+        this.tmpIgnoresOneWay = false;
+        this.oneWayY = 0;
     }
 }

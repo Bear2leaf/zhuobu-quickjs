@@ -12,13 +12,21 @@ const mh = 60;
 const mapData = Object.freeze(new Array(mw * mh).fill(TileType.Empty).map((tile, index) => {
     if (Math.floor(index / mw) < 10) {
         return TileType.Block;
-    } else if (Math.floor(index / mw) < 50) {
-        return Math.random() < 0.01 ? TileType.OneWay : Math.random() < 0.1 ? TileType.Block : TileType.Empty;
+    } else if (Math.floor(index / mw) < 20) {
+        return Math.random() < 0.2 ? TileType.OneWay : Math.random() < 0.1 ? TileType.Block : TileType.Empty;
     }
     return TileType.Empty;
 }));
 const spritesData = Object.freeze(mapData.map((tile) => {
     return new SpriteRenderer(tile);
+}));
+const collisionsData = Object.freeze(mapData.map((tile) => {    
+    if (tile === TileType.Block) {
+        return TileCollisionType.Full;
+    } else if (tile === TileType.OneWay) {
+        return TileCollisionType.OneWaySlope45;
+    }
+    return TileCollisionType.Empty;
 }));
 export class Map {
     constructor() {
@@ -42,8 +50,8 @@ export class Map {
         }
         /** @type {vec2[]} */
         this.mOverlappingAreas = [];
-        /** @type {EnumValue<TileCollisionType>[]} */
-        this.mTilesCollision = [];
+        /** @type {Readonly<EnumValue<typeof TileCollisionType>[]>} */
+        this.mTilesCollision = collisionsData;
     }
     checkCollisions() {
         /** @type {{overlap: vec2}} */
@@ -192,7 +200,7 @@ export class Map {
     getMapTilePosition(tileIndexX, tileIndexY) {
         return vec2.fromValues(this.mPosition[0] + tileIndexX * cTileSize, this.mPosition[1] + tileIndexY * cTileSize);
     }
-
+    
     /**
      * 
      * @param {number} x 

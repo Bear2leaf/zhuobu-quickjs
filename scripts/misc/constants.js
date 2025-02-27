@@ -1,5 +1,5 @@
-export const cGravity = -1000;
-export const cMaxFallingSpeed = -500;
+export const cGravity = -1030;
+export const cMaxFallingSpeed = -900;
 
 export const cWalkSpeed = 160.0;
 export const cJumpSpeed = 410.0;
@@ -16,4 +16,6 @@ export const cGrabLedgeStartY = 0.0;
 export const cGrabLedgeEndY = 2.0;
 
 export const cGrabLedgeTileOffsetY = -4.0;
-export const cJumpFramesThreshold = 4;
+export const cJumpFramesThreshold = 10;
+
+export const cSlopeWallHeight = 4.0;
