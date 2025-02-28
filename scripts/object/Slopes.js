@@ -331,6 +331,8 @@ export const Slopes = {
                     offsetCache[x][y][w] = [];
                     for (let h = 0; h < len; ++h) {
                         offsetCache[x][y][w][h] = this.getOffset5p(slopeExtended, x, y, w, h);
+                        // offsetCache[x][y][w][h] = new SlopeOffsetSB(0, 0, 0, 0, 0, 0, 0, 0);
+
                     }
                 }
             }

@@ -4,8 +4,8 @@ import { sign } from "../misc/math.js";
 export class AABB {
     get halfSize() {
         return vec2.fromValues(
-            Math.round(this.mHalfSize[0] * this.scale[0]),
-            Math.round(this.mHalfSize[1] * this.scale[1])
+            this.mHalfSize[0] * this.scale[0],
+            this.mHalfSize[1] * this.scale[1]
         );
     }
     set halfSize(value) {

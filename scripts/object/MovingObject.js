@@ -1,16 +1,16 @@
-import { AABB } from "./AABB.js";
-import { getScreenHeight, getScreenWidth, getTime, vec2, vec3 } from "../libs.js";
-import { cOneWayPlatformThreshold, cTileSize } from "../misc/constants.js";
-import { Map } from "./Map.js";
+import { vec2, vec3 } from "../libs.js";
+import { cTileSize } from "../misc/constants.js";
 import { ObjectType, TileCollisionType } from "../misc/enums.js";
-import { CollisionData } from "./CollisionData.js";
-import { PositionState } from "./PositionState.js";
 import { clamp, sign } from "../misc/math.js";
+import { AABB } from "./AABB.js";
+import { CollisionData } from "./CollisionData.js";
+import { Map } from "./Map.js";
+import { PositionState } from "./PositionState.js";
 import { Slopes } from "./Slopes.js";
 
 export class MovingObject {
     get position() {
-        return vec3.fromValues(Math.round(this.mPosition[0]), Math.round(this.mPosition[1]), 0.0);
+        return vec2.round(vec2.create(), this.mPositionRender);
     }
     get scale() {
         return vec2.fromValues(this.mScale[0], this.mScale[1]);
@@ -19,12 +19,22 @@ export class MovingObject {
         this.mScale = vec2.fromValues(value[0], value[1]);
         this.mAABB.scale = [Math.abs(this.mScale[0]), Math.abs(this.mScale[1])];
     }
+    /** @param {number} value  */
+    set alpha(value) {
+        vec2.copy(this.mPositionRender, this.mPosition);
+        const newPosition = vec2.lerp(vec2.create(), this.mPositionPrev, this.mPositionRender, value);
+        vec2.copy(this.mPositionPrev, this.mPositionRender);
+        this.mPositionRender = newPosition;
+        this.mAlpha = value;
+    }
     /** @param {Map} map */
     constructor(map) {
 
         this.mOldPosition = vec2.create();
-        this.mPosition = vec2.fromValues(getScreenWidth() / 2, getScreenHeight() / 2);
-        this.mRemainder = vec2.fromValues(getScreenWidth() / 2, getScreenHeight() / 2);
+        this.mPosition = vec2.create();
+        this.mPositionPrev = vec2.create();
+        this.mPositionRender = vec2.create();
+        this.mReminder = vec2.create();
         this.mPS = new PositionState();
         this.mOldSpeed = vec2.create();
         this.mSpeed = vec2.create();
@@ -32,7 +42,7 @@ export class MovingObject {
         this.mScale = vec2.fromValues(1, 1);
         this.mAABB = new AABB();
 
-
+        this.mAlpha = 1.0;
 
 
         this.deltaTime = 0;
@@ -55,7 +65,10 @@ export class MovingObject {
         this.mIsKinematic = false;
 
         this.mSlopeWallHeight = 0;
+        /** @type {MovingObject | null} */
+        this.mMountParent = null;
 
+        this.mOffset = vec2.create();
 
     }
     init() {
@@ -496,12 +509,12 @@ export class MovingObject {
      * topRight: vec2,
      * bottomLeft: vec2,
      * state: PositionState,
-     * remainder: vec2,
+     * reminder: vec2,
      * }} ref
      * @returns 
      */
     move(offset, speed, aabb, ref) {
-        vec2.add(ref.remainder, ref.remainder, offset);
+        vec2.add(ref.reminder, ref.reminder, offset);
 
         vec2.copy(ref.topRight, aabb.max());
         vec2.copy(ref.bottomLeft, aabb.min());
@@ -510,8 +523,8 @@ export class MovingObject {
         ref.foundObstacleY = false;
         const step = vec2.fromValues(sign(offset[0]), sign(offset[1]));
 
-        const move = vec2.fromValues(Math.round(ref.remainder[0]), Math.round(ref.remainder[1]));
-        vec2.sub(ref.remainder, ref.remainder, move);
+        const move = vec2.fromValues(Math.round(ref.reminder[0]), Math.round(ref.reminder[1]));
+        vec2.sub(ref.reminder, ref.reminder, move);
         if (move[0] == 0.0 && move[1] == 0.0)
             return;
         else if (move[0] != 0.0 && move[1] == 0.0) {
@@ -538,6 +551,7 @@ export class MovingObject {
             const speedRatio = Math.abs(speed[1]) / Math.abs(speed[0]);
             let vertAccum = 0.0;
             while (!ref.foundObstacleX && !ref.foundObstacleY && (move[0] != 0.0 || move[1] != 0.0)) {
+
                 vertAccum += sign(step[1]) * speedRatio;
                 this.moveX(step[0], step[0], ref);
                 move[0] -= step[0];
@@ -593,6 +607,7 @@ export class MovingObject {
                     this.mSpeed[1] = Math.min(this.mSpeed[1], 0.0);
                 }
                 else {
+                    this.tryAutoMount(other);
                     this.mPS.pushesBottomObject = true;
                     this.mSpeed[1] = Math.max(this.mSpeed[1], 0.0);
                 }
@@ -607,47 +622,59 @@ export class MovingObject {
             if (other.mIsKinematic)
                 speedRatioX = speedRatioY = 1.0;
             else {
-                if (speedSum[0] === 0.0 && speedSum[1] === 0.0) {
-                    speedRatioX = speedRatioY = 0.5;
-                } else if (speedSum[0] === 0.0) {
+                if (speedSum[0] === 0.0) {
                     speedRatioX = 0.5;
-                    speedRatioY = absSpeed1[1] / speedSum[1];
-                } else if (speedSum[1] === 0.0) {
-                    speedRatioX = absSpeed1[0] / speedSum[0];
-                    speedRatioY = 0.5;
                 } else {
                     speedRatioX = absSpeed1[0] / speedSum[0];
+                }
+                if (speedSum[1] === 0.0) {
+                    speedRatioY = 0.5;
+                } else {
                     speedRatioY = absSpeed1[1] / speedSum[1];
                 }
             }
-            const offsetX = overlap[0] * speedRatioX;
-            const offsetY = overlap[1] * speedRatioY;
 
-            const overlappedLastFrameX = Math.abs(data.oldPos1[0] - data.oldPos2[0]) < this.mAABB.halfSize[0] + other.mAABB.halfSize[0];
-            const overlappedLastFrameY = Math.abs(data.oldPos1[1] - data.oldPos2[1]) < this.mAABB.halfSize[1] + other.mAABB.halfSize[1];
+            const smallestOverlap = Math.min(Math.abs(overlap[0]), Math.abs(overlap[1]));
 
+            if (smallestOverlap == Math.abs(overlap[0])) {
+                const offsetX = overlap[0] * speedRatioX;
 
-            if ((!overlappedLastFrameX && overlappedLastFrameY)
-                || (!overlappedLastFrameX && !overlappedLastFrameY && Math.abs(overlap[0]) <= Math.abs(overlap[1]))) {
-                this.mPosition[0] += offsetX;
+                this.mOffset[0] += offsetX;
                 offsetSum[0] += offsetX;
+
                 if (overlap[0] < 0.0) {
+                    if (other.mIsKinematic && this.mPS.pushesLeftTile)
+                        this.crush();
+
                     this.mPS.pushesRightObject = true;
                     this.mSpeed[0] = Math.min(this.mSpeed[0], 0.0);
                 }
                 else {
+                    if (other.mIsKinematic && this.mPS.pushesRightTile)
+                        this.crush();
+
                     this.mPS.pushesLeftObject = true;
                     this.mSpeed[0] = Math.max(this.mSpeed[0], 0.0);
                 }
             }
             else {
-                this.mPosition[1] += offsetY;
+                const offsetY = overlap[1] * speedRatioY;
+
+                this.mOffset[1] += offsetY;
                 offsetSum[1] += offsetY;
+
                 if (overlap[1] < 0.0) {
+                    if (other.mIsKinematic && this.mPS.pushesBottomTile)
+                        this.crush();
+
                     this.mPS.pushesTopObject = true;
                     this.mSpeed[1] = Math.min(this.mSpeed[1], 0.0);
                 }
                 else {
+                    if (other.mIsKinematic && this.mPS.pushesTopTile)
+                        this.crush();
+
+                    this.tryAutoMount(other);
                     this.mPS.pushesBottomObject = true;
                     this.mSpeed[1] = Math.max(this.mSpeed[1], 0.0);
                 }
@@ -680,13 +707,6 @@ export class MovingObject {
             topRight: this.mAABB.max(),
             bottomLeft: this.mAABB.min(),
             state: this.mPS,
-            move: false,
-            remainder: this.mRemainder,
-            aabb: this.mAABB,
-            foundObstacleX: false,
-            foundObstacleY: false,
-            offset: 0,
-            step: 0
         }
         this.collidesWithTiles(ref);
         vec2.copy(this.mOldSpeed, this.mSpeed);
@@ -699,26 +719,62 @@ export class MovingObject {
         if (this.mPS.pushesRightTile)
             this.mSpeed[0] = Math.min(0.0, this.mSpeed[0]);
         vec2.copy(this.mOldPosition, this.mPosition);
-        const newPosition = vec2.add(vec2.create(), this.mPosition, vec2.scale(vec2.create(), this.mSpeed, this.deltaTime));
-        const offset = vec2.sub(vec2.create(), newPosition, this.mPosition);
-        if (offset[0] != 0.0 || offset[1] != 0.0) {
-            this.move(offset, this.mSpeed, this.mAABB, ref);
+
+
+        vec2.scale(this.mOffset, this.mSpeed, this.deltaTime);
+        if (this.mMountParent != null) {
+            if (this.hasCollisionDataFor(this.mMountParent)) {
+                vec2.add(this.mOffset, this.mOffset, vec2.sub(vec2.create(), this.mMountParent.mPosition, this.mMountParent.mOldPosition));
+            }
+            else {
+                this.mMountParent = null;
+            }
         }
+
+        vec2.add(this.mPosition, this.mPosition, vec2.round(vec2.create(), vec2.add(vec2.create(), this.mOffset, this.mReminder)));
+
         vec2.copy(this.mAABB.center, this.mPosition);
-        this.mPS.pushesBottom = this.mPS.pushesBottomTile;
-        this.mPS.pushesRight = this.mPS.pushesRightTile;
-        this.mPS.pushesLeft = this.mPS.pushesLeftTile;
-        this.mPS.pushesTop = this.mPS.pushesTopTile;
     }
     updatePhysicsP2() {
+        vec2.sub(this.mPosition, this.mPosition, vec2.round(vec2.create(), vec2.add(vec2.create(), this.mOffset, this.mReminder)));
+        vec2.copy(this.mAABB.center, this.mPosition);
+
         this.updatePhysicsResponse();
+
+        if (this.mOffset[0] != 0.0 || this.mOffset[1] != 0.0) {
+            const ref = {
+                position: this.mPosition,
+                state: this.mPS,
+                reminder: this.mReminder,
+                topRight: this.mAABB.max(),
+                bottomLeft: this.mAABB.min(),
+                foundObstacleX: false,
+                foundObstacleY: false,
+            }
+            this.move(this.mOffset, this.mSpeed, this.mAABB, ref);
+        }
 
         this.mPS.pushesBottom = this.mPS.pushesBottomTile || this.mPS.pushesBottomObject;
         this.mPS.pushesRight = this.mPS.pushesRightTile || this.mPS.pushesRightObject;
         this.mPS.pushesLeft = this.mPS.pushesLeftTile || this.mPS.pushesLeftObject;
         this.mPS.pushesTop = this.mPS.pushesTopTile || this.mPS.pushesTopObject;
+        if (!this.mPS.tmpSticksToSlope && this.mPS.pushesTop || this.mSpeed[1] <= 0.0) {
+            this.mPS.tmpSticksToSlope = true;
+        }
         //update the aabb 
         vec2.copy(this.mAABB.center, this.mPosition);
+    }
+    /**
+     * 
+     * @param {MovingObject} platform 
+     */
+    tryAutoMount(platform) {
+        if (this.mMountParent == null) {
+            this.mMountParent = platform;
+        }
+    }
+    crush() {
+        vec2.add(this.mPosition, this.mMap.mPosition, vec2.fromValues(this.mMap.mWidth / 2 * cTileSize, this.mMap.mHeight / 2 * cTileSize));
     }
     /**
      * 
@@ -727,7 +783,6 @@ export class MovingObject {
      * topRight: vec2,
      * bottomLeft: vec2,
      * state: PositionState
-     * move: boolean
      * }} ref
      */
     collidesWithTiles(ref) {

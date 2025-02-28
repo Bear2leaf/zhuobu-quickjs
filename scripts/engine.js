@@ -1,11 +1,11 @@
-import { loadText, loadImage, initContext, clearColor, createShaderProgram, useProgram, createVAO, createBuffer, bindVAO, bindVBO, bufferData, bindEBO, bufferDataElement, setVertexAttributePointer, enableVertexAttribute, createTexture, activeTexture, bindTexture, updateTexture, mat4, resize, getScreenWidth, getScreenHeight, uniformMatrix4fv, getUniformLocation, uniform1f, getTime, uniform1i, clear, drawElements, pollEvents, shouldCloseWindow, swapBuffers, terminate, getKey } from "./libs.js";
+import { activeTexture, bindEBO, bindTexture, bindVAO, bindVBO, bufferData, bufferDataElement, clear, clearColor, createBuffer, createShaderProgram, createTexture, createVAO, drawElements, enableVertexAttribute, getKey, getScreenHeight, getScreenWidth, getTime, getUniformLocation, initContext, loadImage, loadText, mat4, pollEvents, resize, setVertexAttributePointer, shouldCloseWindow, swapBuffers, terminate, uniform1f, uniform1i, uniformMatrix4fv, updateTexture, useProgram } from "./libs.js";
 import { cHalfSizeX, cHalfSizeY, cTileSize } from "./misc/constants.js";
 import { KeyCode, KeyCodeGLFW, KeyInput, ObjectType, TileType } from "./misc/enums.js";
 import { Character } from "./object/Character.js";
-import { MovingObject } from "./object/MovingObject.js";
 import { Map as GameMap } from "./object/Map.js";
-import { Slopes } from "./object/Slopes.js";
+import { MovingObject } from "./object/MovingObject.js";
 import { MovingPlatform } from "./object/MovingPlatform.js";
+import { Slopes } from "./object/Slopes.js";
 
 
 
@@ -90,6 +90,8 @@ export function init() {
         character = new Character(map, inputs, prevInputs);
         character.init();
         character.mType = ObjectType.Player;
+        character.mPosition[0] = 100;
+        character.mPosition[1] = 200;
         mObjects.push(character);
     }
     {
@@ -97,6 +99,7 @@ export function init() {
         o.init();
         o.mType = ObjectType.NPC;
         o.mPosition[0] = 300;
+        o.mPosition[1] = 100;
         mObjects.push(o);
     }
     {
@@ -104,15 +107,17 @@ export function init() {
         o.init();
         o.mType = ObjectType.NPC;
         o.mPosition[0] = 100;
+        o.mPosition[1] = 200;
         mObjects.push(o);
     }
-    // {
-    //     const o = new MovingPlatform(map);
-    //     o.init();
-    //     o.mType = ObjectType.MovingPlatform;
-    //     o.mPosition[0] = 250;
-    //     mMovingPlatforms.push(o);
-    // }
+    {
+        const o = new MovingPlatform(map);
+        o.init();
+        o.mType = ObjectType.MovingPlatform;
+        o.mPosition[0] = 450;
+        o.mPosition[1] = 200;
+        mMovingPlatforms.push(o);
+    }
     clearColor(0.5, 1, 0.5, 1.0);
     const program = createShaderProgram(vertexShaderSource, fragmentShaderSource);
     programCache.set("demo", program);
@@ -191,25 +196,15 @@ export function init() {
     setVertexAttributePointer(2, 2, false, 8, 6);
     enableVertexAttribute(2);
 
-
 }
-/**
- * 
- * @param {number} delta 
- */
-export function fixedUpdate(delta) {
-    const objs = mObjects.concat(mMovingPlatforms);
+export function fixedUpdate() {
+    const objs = mMovingPlatforms.concat(mObjects);
     for (const obj of objs) {
         switch (obj.mType) {
             case ObjectType.Player:
             case ObjectType.NPC:
-                obj.deltaTime = delta;
-                obj.customUpdate();
-                map.updateAreas(obj);
-                obj.mAllCollidingObjects.splice(0, obj.mAllCollidingObjects.length);
-                break;
             case ObjectType.MovingPlatform:
-                obj.deltaTime = delta;
+                obj.deltaTime = 1 / FPS;
                 obj.customUpdate();
                 map.updateAreas(obj);
                 obj.mAllCollidingObjects.splice(0, obj.mAllCollidingObjects.length);
@@ -218,7 +213,6 @@ export function fixedUpdate(delta) {
 
     }
     map.checkCollisions();
-
     for (const element of objs) {
         element.updatePhysicsP2();
     }
@@ -248,7 +242,8 @@ function getProgram(name) {
     }
     throw new Error(`Program ${name} not found`);
 }
-export function render() {
+/** @param {number} alpha  */
+export function render(alpha) {
     resize();
     clear();
     const program = "demo";
@@ -292,6 +287,7 @@ export function render() {
     bindVAO(vaoMovingPlatform);
     for (let i = 0; i < mMovingPlatforms.length; ++i) {
         const character = mMovingPlatforms[i];
+        character.alpha = alpha;
         mat4.identity(m)
         mat4.translate(m, m, [character.position[0], character.position[1], 0]);
         mat4.scale(m, m, [character.scale[0], character.scale[1], 1]);
@@ -309,6 +305,7 @@ export function render() {
     bindVAO(vao);
     for (let i = 0; i < mObjects.length; ++i) {
         const character = mObjects[i];
+        character.alpha = alpha;
         mat4.identity(m)
         mat4.translate(m, m, [character.position[0], character.position[1], 0]);
         mat4.scale(m, m, [character.scale[0], character.scale[1], 1]);
@@ -361,39 +358,45 @@ function update() {
         inputs.delete(KeyInput.ScaleUp)
     }
 }
-let lastTime = getTime();
 export async function mainQuickjs() {
     keys = KeyCodeGLFW;
     await load();
     init();
     let acc = 0;
-    do {
+    let lastTime = getTime();
+    while (!shouldCloseWindow()) {
         const currentTime = getTime();
         const delta = currentTime - lastTime;
         acc += delta;
         lastTime = currentTime;
         update();
         while (acc >= 1 / FPS) {
-            fixedUpdate(acc);
+            fixedUpdate();
             acc -= 1 / FPS;
         }
-        render();
+        render(acc / (1 / FPS));
         swapBuffers();
         pollEvents();
-    } while (!shouldCloseWindow());
+    }
     terminate();
 }
 export async function main() {
     keys = KeyCode;
     await load();
     init();
+    let acc = 0;
+    let lastTime = getTime();
     function loop() {
         const currentTime = getTime();
         const delta = currentTime - lastTime;
+        acc += delta;
         lastTime = currentTime;
         update();
-        fixedUpdate(delta);
-        render();
+        while (acc >= 1 / FPS) {
+            fixedUpdate();
+            acc -= 1 / FPS;
+        }
+        render(acc / (1 / FPS));
         requestAnimationFrame(loop);
     }
     loop();

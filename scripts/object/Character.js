@@ -1,8 +1,8 @@
 import { Animator } from "../component/Animator.js";
 import { AudioSource } from "../component/AudioSource.js";
 import { vec2 } from "../libs.js";
-import { cGrabLedgeEndY, cGrabLedgeStartY, cGrabLedgeTileOffsetY, cGravity, cHalfSizeX, cHalfSizeY, cJumpFramesThreshold, cJumpSpeed, cMaxFallingSpeed, cMinJumpSpeed, cOneWayPlatformThreshold, cSlopeWallHeight, cTileSize, cWalkSfxTime, cWalkSpeed } from "../misc/constants.js";
-import { CharacterState, KeyInput, ObjectType, TileType } from "../misc/enums.js";
+import { cGrabLedgeEndY, cGrabLedgeStartY, cGrabLedgeTileOffsetY, cGravity, cHalfSizeX, cHalfSizeY, cJumpFramesThreshold, cJumpSpeed, cMaxFallingSpeed, cMinJumpSpeed, cSlopeWallHeight, cTileSize, cWalkSfxTime, cWalkSpeed } from "../misc/constants.js";
+import { CharacterState, KeyInput } from "../misc/enums.js";
 import { sign } from "../misc/math.js";
 import { AudioClip } from "./AudioClip.js";
 import { Map } from "./Map.js";
@@ -162,7 +162,7 @@ export class Character extends MovingObject {
                     && !this.mPS.pushesTop
                     && ((this.mPS.pushesRight && this.keyState(KeyInput.GoRight)) || (this.mPS.pushesLeft && this.keyState(KeyInput.GoLeft)))) {
                     const aabbCornerOffset = vec2.create();
-                    
+
                     if (this.mPS.pushesRight && this.keyState(KeyInput.GoRight))
                         vec2.copy(aabbCornerOffset, this.mAABB.halfSize);
                     else
@@ -233,7 +233,7 @@ export class Character extends MovingObject {
     }
     init() {
         this.scale = vec2.fromValues(1, 1);
-        vec2.copy(this.mPosition, this.position);
+        vec2.floor(this.mPosition, this.mPosition);
         this.mAABB.halfSize = [cHalfSizeX, cHalfSizeY];
 
         this.mJumpSpeed = cJumpSpeed;

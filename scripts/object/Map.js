@@ -1,7 +1,7 @@
 import { SpriteRenderer } from "../component/SpriteRenderer.js";
 import { vec2, vec3 } from "../libs.js";
 import { cTileSize } from "../misc/constants.js";
-import { TileCollisionType, TileType } from "../misc/enums.js";
+import { ObjectType, TileCollisionType, TileType } from "../misc/enums.js";
 import { CollisionData } from "./CollisionData.js";
 import { MovingObject } from "./MovingObject.js";
 const mw = 80;
@@ -10,17 +10,22 @@ const mh = 60;
  * @type {Readonly<EnumValue<typeof TileType>[]>}
  */
 const mapData = Object.freeze(new Array(mw * mh).fill(TileType.Empty).map((tile, index) => {
-    if (Math.floor(index / mw) < 10) {
+
+    // add border
+    if (index % mw === 0 || index % mw === mw - 1 || Math.floor(index / mw) === 0 || Math.floor(index / mw) === mh - 1) {
+        return TileType.Block;
+    }
+    if (Math.floor(index / mw) < 5) {
         return TileType.Block;
     } else if (Math.floor(index / mw) < 30) {
-        return Math.random() < 0.01 ? TileType.Block : TileType.Empty;
+        return Math.random() < 0.02 ? TileType.Block : Math.random() < 0.02 ? TileType.OneWay : TileType.Empty;
     }
     return TileType.Empty;
 }));
 const spritesData = Object.freeze(mapData.map((tile) => {
     return new SpriteRenderer(tile);
 }));
-const collisionsData = Object.freeze(mapData.map((tile) => {    
+const collisionsData = Object.freeze(mapData.map((tile) => {
     if (tile === TileType.Block) {
         return TileCollisionType.Full;
     } else if (tile === TileType.OneWay) {
@@ -109,7 +114,15 @@ export class Map {
         }
         const areas = obj.mAreas;
         const ids = obj.mIdsInAreas;
+        // if (obj.mType === ObjectType.Player) {
+        //     console.log("++++++++++++++++++++++++++++++");
+        //     console.log(obj.mType, areas.length, ...areas);
+        // }
         for (let i = 0; i < areas.length; ++i) {
+
+            // if (obj.mType === ObjectType.Player) {
+            //     console.log(i, areas[i], ...this.mOverlappingAreas, this.mOverlappingAreas.every((a) => a[0] !== areas[i][0] || a[1] !== areas[i][1]));
+            // }
             if (this.mOverlappingAreas.every((a) => a[0] !== areas[i][0] || a[1] !== areas[i][1])) {
                 this.removeObjectFromArea(areas[i], ids[i], obj);
                 //object no longer has an index in the area 
@@ -154,7 +167,7 @@ export class Map {
         const tmpIds = tmp.mIdsInAreas;
         const tmpAreas = tmp.mAreas;
         for (let i = 0; i < tmpAreas.length; ++i) {
-            if (tmpAreas[i] === areaIndex) {
+            if (tmpAreas[i][0] === areaIndex[0] && tmpAreas[i][1] === areaIndex[1]) {
                 tmpIds[i] = objIndexInArea;
                 break;
             }
@@ -200,7 +213,7 @@ export class Map {
     getMapTilePosition(tileIndexX, tileIndexY) {
         return vec2.fromValues(this.mPosition[0] + tileIndexX * cTileSize, this.mPosition[1] + tileIndexY * cTileSize);
     }
-    
+
     /**
      * 
      * @param {number} x 
