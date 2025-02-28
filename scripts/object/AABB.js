@@ -3,10 +3,10 @@ import { sign } from "../misc/math.js";
 
 export class AABB {
     get halfSize() {
-        return [
-            this.mHalfSize[0] * this.scale[0],
-            this.mHalfSize[1] * this.scale[1]
-        ];
+        return vec2.fromValues(
+            Math.round(this.mHalfSize[0] * this.scale[0]),
+            Math.round(this.mHalfSize[1] * this.scale[1])
+        );
     }
     set halfSize(value) {
         this.mHalfSize = vec2.fromValues(value[0], value[1]);

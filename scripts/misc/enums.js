@@ -31,8 +31,10 @@ export const KeyCodeGLFW = Object.freeze({
     Equal: 61
 })
 export const ObjectType = Object.freeze({
-    Player: 0,
-    NPC: 1,
+    None: 0,
+    Player: 1,
+    NPC: 2,
+    MovingPlatform: 3,
 })
 
 

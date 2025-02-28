@@ -12,8 +12,8 @@ const mh = 60;
 const mapData = Object.freeze(new Array(mw * mh).fill(TileType.Empty).map((tile, index) => {
     if (Math.floor(index / mw) < 10) {
         return TileType.Block;
-    } else if (Math.floor(index / mw) < 20) {
-        return Math.random() < 0.2 ? TileType.OneWay : Math.random() < 0.1 ? TileType.Block : TileType.Empty;
+    } else if (Math.floor(index / mw) < 30) {
+        return Math.random() < 0.01 ? TileType.Block : TileType.Empty;
     }
     return TileType.Empty;
 }));
@@ -110,7 +110,7 @@ export class Map {
         const areas = obj.mAreas;
         const ids = obj.mIdsInAreas;
         for (let i = 0; i < areas.length; ++i) {
-            if (!this.mOverlappingAreas.some((area) => area[0] === areas[i][0] && area[1] === areas[i][1])) {
+            if (this.mOverlappingAreas.every((a) => a[0] !== areas[i][0] || a[1] !== areas[i][1])) {
                 this.removeObjectFromArea(areas[i], ids[i], obj);
                 //object no longer has an index in the area 
                 areas.splice(i, 1);
@@ -120,7 +120,7 @@ export class Map {
         }
         for (let i = 0; i < this.mOverlappingAreas.length; ++i) {
             const area = this.mOverlappingAreas[i];
-            if (!areas.some((a) => a[0] === area[0] && a[1] === area[1])) {
+            if (areas.every((a) => a[0] !== area[0] || a[1] !== area[1])) {
                 this.addObjectToArea(area, obj);
             }
         }
@@ -146,13 +146,13 @@ export class Map {
      * @param {MovingObject} obj 
      */
     removeObjectFromArea(areaIndex, objIndexInArea, obj) {
-        var area = this.mObjectsInArea[areaIndex[1] * this.mHorizontalAreasCount + areaIndex[0]];
+        const area = this.mObjectsInArea[areaIndex[1] * this.mHorizontalAreasCount + areaIndex[0]];
         //swap the last item with the one we are removing
-        var tmp = area[area.length - 1];
+        const tmp = area[area.length - 1];
         area[area.length - 1] = obj;
         area[objIndexInArea] = tmp;
-        var tmpIds = tmp.mIdsInAreas;
-        var tmpAreas = tmp.mAreas;
+        const tmpIds = tmp.mIdsInAreas;
+        const tmpAreas = tmp.mAreas;
         for (let i = 0; i < tmpAreas.length; ++i) {
             if (tmpAreas[i] === areaIndex) {
                 tmpIds[i] = objIndexInArea;
@@ -273,7 +273,6 @@ export class Map {
         if (x <= -1 || x >= this.mWidth
             || y <= -1 || y >= this.mHeight)
             return TileCollisionType.Empty;
-
         return this.mTilesCollision[y * this.mWidth + x];
     }
 }

@@ -5,6 +5,7 @@ import { Character } from "./object/Character.js";
 import { MovingObject } from "./object/MovingObject.js";
 import { Map as GameMap } from "./object/Map.js";
 import { Slopes } from "./object/Slopes.js";
+import { MovingPlatform } from "./object/MovingPlatform.js";
 
 
 
@@ -12,6 +13,8 @@ import { Slopes } from "./object/Slopes.js";
 let vao;
 /** @type {WebGLVertexArrayObject} */
 let vaoTile;
+/** @type {WebGLVertexArrayObject} */
+let vaoMovingPlatform;
 
 
 /** @type {string}*/
@@ -67,32 +70,49 @@ const positionTile = new Float32Array([
     -cTileSize / 2, -cTileSize / 2, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
     -cTileSize / 2, +cTileSize / 2, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0
 ]);
+const positionMovingPlatform = new Float32Array([
+    +32, +8, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0,
+    +32, -8, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
+    -32, -8, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+    -32, +8, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0
+]);
 const m = mat4.create();
 const zoom = 1;
 /** @type {Array<MovingObject>} */
 const mObjects = new Array();
+/** @type {Array<MovingObject>} */
+const mMovingPlatforms = new Array();
 const map = new GameMap();
 export function init() {
     initContext();
     Slopes.init();
     {
+        character = new Character(map, inputs, prevInputs);
+        character.init();
+        character.mType = ObjectType.Player;
+        mObjects.push(character);
+    }
+    {
         const o = new Character(map);
-        o.init(new Set, new Set);
+        o.init();
         o.mType = ObjectType.NPC;
-        o.mPosition[0] = 300;   
+        o.mPosition[0] = 300;
         mObjects.push(o);
     }
     {
         const o = new Character(map);
-        o.init(new Set, new Set);
+        o.init();
         o.mType = ObjectType.NPC;
-        o.mPosition[0] = 100;   
+        o.mPosition[0] = 100;
         mObjects.push(o);
     }
-    character = new Character(map);
-    mObjects.push(character);
-    character.init(inputs, prevInputs);
-    character.mType = ObjectType.Player;
+    // {
+    //     const o = new MovingPlatform(map);
+    //     o.init();
+    //     o.mType = ObjectType.MovingPlatform;
+    //     o.mPosition[0] = 250;
+    //     mMovingPlatforms.push(o);
+    // }
     clearColor(0.5, 1, 0.5, 1.0);
     const program = createShaderProgram(vertexShaderSource, fragmentShaderSource);
     programCache.set("demo", program);
@@ -152,26 +172,54 @@ export function init() {
     bindTexture(texTile2);
     updateTexture(image2);
 
+
+    vaoMovingPlatform = createVAO();
+    const vboMovingPlatform = createBuffer();
+    const eboMovingPlatform = createBuffer();
+    bindVAO(vaoMovingPlatform);
+    bindVBO(vboMovingPlatform);
+    bufferData(positionMovingPlatform);
+    bindEBO(eboMovingPlatform);
+    bufferDataElement(new Uint32Array([
+        0, 1, 3,  // first Triangle
+        1, 2, 3   // second Triangle
+    ]));
+    setVertexAttributePointer(0, 3, false, 8, 0);
+    enableVertexAttribute(0);
+    setVertexAttributePointer(1, 3, false, 8, 3);
+    enableVertexAttribute(1);
+    setVertexAttributePointer(2, 2, false, 8, 6);
+    enableVertexAttribute(2);
+
+
 }
 /**
  * 
  * @param {number} delta 
  */
 export function fixedUpdate(delta) {
-    for (let i = 0; i < mObjects.length; ++i) {
-        switch (mObjects[i].mType) {
+    const objs = mObjects.concat(mMovingPlatforms);
+    for (const obj of objs) {
+        switch (obj.mType) {
             case ObjectType.Player:
             case ObjectType.NPC:
-                mObjects[i].deltaTime = delta;
-                mObjects[i].customUpdate();
-                map.updateAreas(mObjects[i]);
-                mObjects[i].mAllCollidingObjects.splice(0, mObjects[i].mAllCollidingObjects.length);
+                obj.deltaTime = delta;
+                obj.customUpdate();
+                map.updateAreas(obj);
+                obj.mAllCollidingObjects.splice(0, obj.mAllCollidingObjects.length);
+                break;
+            case ObjectType.MovingPlatform:
+                obj.deltaTime = delta;
+                obj.customUpdate();
+                map.updateAreas(obj);
+                obj.mAllCollidingObjects.splice(0, obj.mAllCollidingObjects.length);
                 break;
         }
+
     }
     map.checkCollisions();
 
-    for (const element of mObjects) {
+    for (const element of objs) {
         element.updatePhysicsP2();
     }
 }
@@ -241,11 +289,28 @@ export function render() {
     }
 
 
+    bindVAO(vaoMovingPlatform);
+    for (let i = 0; i < mMovingPlatforms.length; ++i) {
+        const character = mMovingPlatforms[i];
+        mat4.identity(m)
+        mat4.translate(m, m, [character.position[0], character.position[1], 0]);
+        mat4.scale(m, m, [character.scale[0], character.scale[1], 1]);
+        uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, m);
+        uniform1f(getUniformLocationCached(program, "u_time"), 0);
+        activeTexture(0);
+        bindTexture(tex1);
+        uniform1i(getUniformLocationCached(program, "u_texture1"), 0);
+        activeTexture(1);
+        bindTexture(tex2);
+        uniform1i(getUniformLocationCached(program, "u_texture2"), 1);
+        drawElements(6);
+    }
+
     bindVAO(vao);
     for (let i = 0; i < mObjects.length; ++i) {
         const character = mObjects[i];
         mat4.identity(m)
-        mat4.translate(m, m, [character.position[0] + character.aabbOffset[0], character.position[1] + character.aabbOffset[1], 0]);
+        mat4.translate(m, m, [character.position[0], character.position[1], 0]);
         mat4.scale(m, m, [character.scale[0], character.scale[1], 1]);
         uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, m);
         uniform1f(getUniformLocationCached(program, "u_time"), 0);
@@ -258,6 +323,7 @@ export function render() {
         drawElements(6);
     }
 }
+
 /**
  * @type {typeof KeyCodeGLFW | typeof KeyCode}
  */

@@ -7,17 +7,10 @@ import { CollisionData } from "./CollisionData.js";
 import { PositionState } from "./PositionState.js";
 import { clamp, sign } from "../misc/math.js";
 import { Slopes } from "./Slopes.js";
-import { cSlopeWallHeight } from "../misc/constants.js";
 
 export class MovingObject {
     get position() {
         return vec3.fromValues(Math.round(this.mPosition[0]), Math.round(this.mPosition[1]), 0.0);
-    }
-    get aabbOffset() {
-        return vec2.fromValues(this.mAABBOffset[0] * this.mScale[0], this.mAABBOffset[1] * this.mScale[1]);
-    }
-    set aabbOffset(value) {
-        this.mAABBOffset = vec2.fromValues(value[0], value[1]);
     }
     get scale() {
         return vec2.fromValues(this.mScale[0], this.mScale[1]);
@@ -38,7 +31,6 @@ export class MovingObject {
 
         this.mScale = vec2.fromValues(1, 1);
         this.mAABB = new AABB();
-        this.mAABBOffset = vec2.create();
 
 
 
@@ -50,7 +42,7 @@ export class MovingObject {
         /** @type {number[]} */
         this.mIdsInAreas = [];
         /** @type {EnumValue<typeof ObjectType>} */
-        this.mType = ObjectType.NPC;
+        this.mType = ObjectType.None;
 
         /** @type {CollisionData[]} */
         this.mAllCollidingObjects = [];
@@ -60,12 +52,17 @@ export class MovingObject {
 
         this.mIgnoresOneWay = false;
         this.mOnOneWayPlatform = false;
-        this.mSticksToSlope = true;
         this.mIsKinematic = false;
+
+        this.mSlopeWallHeight = 0;
 
 
     }
+    init() {
+        throw new Error("Method not implemented.");
+    }
     customUpdate() {
+        throw new Error("Method not implemented.");
     }
     /**
      * 
@@ -74,49 +71,43 @@ export class MovingObject {
      * topRight: vec2,
      * bottomLeft: vec2,
      * state: PositionState,
-     * move: boolean
      * }} ref
      * @returns {boolean}
      */
-    collidesWithTileRight({ position, topRight, bottomLeft, state, move }) {
-        const topRightTile = this.mMap.getMapTileAtPoint(vec2.fromValues(topRight[0] + 0.5, topRight[1] - 0.5));
+    collidesWithTileLeft(ref, move = false) {
+        const topRightTile = this.mMap.getMapTileAtPoint([ref.topRight[0] - 0.5, ref.topRight[1] - 0.5]);
         vec2.floor(topRightTile, topRightTile);
-        const bottomLeftTile = this.mMap.getMapTileAtPoint(vec2.fromValues(bottomLeft[0] + 0.5, bottomLeft[1] + 0.5));
+        const bottomLeftTile = this.mMap.getMapTileAtPoint([ref.bottomLeft[0] - 0.5, ref.bottomLeft[1] + 0.5]);
         vec2.floor(bottomLeftTile, bottomLeftTile);
-        let slopeOffset = 0.0;
-        let oldSlopeOffset = 0.0;
+        let slopeOffset = 0.0, oldSlopeOffset = 0.0;
         let wasOneWay = false, isOneWay;
-
         /** @type {EnumValue<TileCollisionType>} */
         let slopeCollisionType = TileCollisionType.Empty;
         for (let y = bottomLeftTile[1]; y <= topRightTile[1]; ++y) {
-            const tileCollisionType = this.mMap.getCollisionType(topRightTile[0], y);
+            const tileCollisionType = this.mMap.getCollisionType(bottomLeftTile[0], y);
+
             isOneWay = Slopes.isOneWay(tileCollisionType);
-            if (isOneWay && (!move || this.mIgnoresOneWay || state.tmpIgnoresOneWay || y != bottomLeftTile[1]))
+
+            if (isOneWay && (!move || this.mIgnoresOneWay || ref.state.tmpIgnoresOneWay || y != bottomLeftTile[1]))
                 continue;
-
-
             switch (tileCollisionType) {
                 default://slope 
-                    const tileCenter = this.mMap.getMapTilePosition(topRightTile[0], y);
+                    const tileCenter = this.mMap.getMapTilePosition(bottomLeftTile[0], y);
                     const leftTileEdge = (tileCenter[0] - cTileSize / 2);
                     const rightTileEdge = (leftTileEdge + cTileSize);
                     const bottomTileEdge = (tileCenter[1] - cTileSize / 2);
-
-                    
                     oldSlopeOffset = slopeOffset;
-
-                    const offset = Slopes.getOffset6p(tileCenter, bottomLeft[0] + 0.5, topRight[0] + 0.5, bottomLeft[1] + 0.5, topRight[1] - 0.5, tileCollisionType);
+                    const offset = Slopes.getOffset6p(tileCenter, ref.bottomLeft[0] - 0.5, ref.topRight[0] - 0.5, ref.bottomLeft[1] + 0.5, ref.topRight[1] - 0.5, tileCollisionType);
                     slopeOffset = Math.abs(offset.freeUp) < Math.abs(offset.freeDown) ? offset.freeUp : offset.freeDown;
-                    if (!isOneWay && (Math.abs(slopeOffset) >= cSlopeWallHeight || (slopeOffset < 0 && state.pushesBottomTile) || (slopeOffset > 0 && state.pushesTopTile))) {
-                        state.pushesRightTile = true;
-                        vec2.floor(state.rightTile, [topRightTile[0], y]);
+                    if (!isOneWay && (Math.abs(slopeOffset) >= this.mSlopeWallHeight || (slopeOffset < 0 && ref.state.pushesBottomTile) || (slopeOffset > 0 && ref.state.pushesTopTile))) {
+                        ref.state.pushesLeftTile = true;
+                        vec2.floor(ref.state.leftTile, [bottomLeftTile[0], y]);
                         return true;
                     }
                     else if (Math.abs(slopeOffset) > Math.abs(oldSlopeOffset)) {
                         wasOneWay = isOneWay;
                         slopeCollisionType = tileCollisionType;
-                        vec2.floor(state.rightTile, [topRightTile[0], y]);
+                        vec2.floor(ref.state.leftTile, [bottomLeftTile[0], y]);
                     }
                     else
                         slopeOffset = oldSlopeOffset;
@@ -125,77 +116,68 @@ export class MovingObject {
                     break;
             }
         }
-        if (slopeCollisionType != TileCollisionType.Empty && slopeOffset != 0.0) {
-            if (slopeOffset > 0 && slopeOffset < cSlopeWallHeight) {
-                const pos = position, tr = topRight, bl = bottomLeft;
+        if (slopeCollisionType != TileCollisionType.Empty && slopeOffset != 0) {
+            if (slopeOffset > 0 && slopeOffset < this.mSlopeWallHeight) {
+                const pos = vec2.clone(ref.position);
+                const tr = vec2.clone(ref.topRight);
+                const bl = vec2.clone(ref.bottomLeft);
                 pos[1] += slopeOffset - sign(slopeOffset);
                 tr[1] += slopeOffset - sign(slopeOffset);
                 bl[1] += slopeOffset - sign(slopeOffset);
                 const s = new PositionState();
-                const ref = { position: pos, topRight: tr, bottomLeft: bl, state: s, move };
-                if (this.collidesWithTileTop(ref)) {
-                    state.pushesRightTile = true;
+                const newRef = { position: pos, topRight: tr, bottomLeft: bl, state: s }
+                if (this.collidesWithTileTop(newRef)) {
+                    ref.state.pushesLeftTile = true;
                     return true;
-                } else if (ref.move) {
-                    position[1] += slopeOffset;
-                    bottomLeft[1] += slopeOffset;
-                    topRight[1] += slopeOffset;
-                    state.pushesBottomTile = true;
-                    state.onOneWay = wasOneWay;
+                }
+                else if (move) {
+                    ref.position[1] += slopeOffset;
+                    ref.bottomLeft[1] += slopeOffset;
+                    ref.topRight[1] += slopeOffset;
+                    ref.state.pushesBottomTile = true;
+                    ref.state.onOneWay = wasOneWay;
                 }
             }
-            else if (slopeOffset < 0 && slopeOffset > -cSlopeWallHeight) {
-                const pos = position, tr = topRight, bl = bottomLeft;
-                pos[1] += slopeOffset - sign(slopeOffset);
-                tr[1] += slopeOffset - sign(slopeOffset);
-                bl[1] += slopeOffset - sign(slopeOffset);
-                const s = new PositionState();
-                const ref = { position: pos, topRight: tr, bottomLeft: bl, state: s, move };
-                if (this.collidesWithTileBottom(ref)) {
-                    state.pushesRightTile = true;
-                    return true;
-                } else if (ref.move) {
-
-                    position[1] += slopeOffset;
-                    bottomLeft[1] += slopeOffset;
-                    topRight[1] += slopeOffset;
-                    state.pushesTopTile = true;
-                    state.onOneWay = wasOneWay;
-                }
+            else if (slopeOffset < 0) {
+                ref.state.pushesLeftTile = true;
+                return true;
             }
         }
-        if (this.mSticksToSlope && state.pushedBottomTile && move) {
-            const nextX = this.mMap.getMapTileXAtPoint(bottomLeft[0] + 1.0);
-            const bottomY = this.mMap.getMapTileYAtPoint(bottomLeft[1] + 1.0) - 1;
+        if (ref.state.tmpSticksToSlope && ref.state.pushedBottomTile && move) {
+            const nextX = this.mMap.getMapTileXAtPoint(ref.topRight[0] - 1.5);
+            const bottomY = this.mMap.getMapTileYAtPoint(ref.bottomLeft[1] + 1.0) - 1;
 
-            const prevPos = this.mMap.getMapTilePosition(bottomLeftTile[0], bottomLeftTile[1]);
+            const prevPos = this.mMap.getMapTilePosition(topRightTile[0], bottomLeftTile[1]);
             const nextPos = this.mMap.getMapTilePosition(nextX, bottomY);
-            const prevCollisionType = this.mMap.getCollisionType(bottomLeftTile[0], bottomLeftTile[1]);
+
+            const prevCollisionType = this.mMap.getCollisionType(topRightTile[0], bottomLeftTile[1]);
             const nextCollisionType = this.mMap.getCollisionType(nextX, bottomY);
 
-            const x1 = Math.floor(clamp((bottomLeft[0] - (prevPos[0] - cTileSize / 2)), 0.0, 15.0));
-            const x2 = Math.floor(clamp((bottomLeft[0] + 1.0 - (nextPos[0] - cTileSize / 2)), 0.0, 15.0));
+            const x1 = Math.floor(clamp((ref.topRight[0] - 1.0 - (prevPos[0] - cTileSize / 2)), 0.0, cTileSize - 1));
+            const x2 = Math.floor(clamp((ref.topRight[0] - 1.5 - (nextPos[0] - cTileSize / 2)), 0.0, cTileSize - 1));
 
             const slopeHeight = Slopes.getSlopeHeightFromBottom(x1, prevCollisionType);
             const nextSlopeHeight = Slopes.getSlopeHeightFromBottom(x2, nextCollisionType);
 
             const offset = slopeHeight + cTileSize - nextSlopeHeight;
 
-            if (offset < cSlopeWallHeight && offset > 0) {
-                const pos = position, tr = topRight, bl = bottomLeft;
+            if (offset < this.mSlopeWallHeight && offset > 0) {
+                const pos = vec2.clone(ref.position);
+                const tr = vec2.clone(ref.topRight);
+                const bl = vec2.clone(ref.bottomLeft);
                 pos[1] -= offset - sign(offset);
                 tr[1] -= offset - sign(offset);
                 bl[1] -= offset - sign(offset);
-                bl[0] += 1.0;
-                tr[0] += 1.0;
+                bl[0] -= 1.0;
+                tr[0] -= 1.0;
                 const s = new PositionState();
-                const ref = { position: pos, topRight: tr, bottomLeft: bl, state: s, move };
-                if (!this.collidesWithTileBottom(ref)) {
-                    position[1] -= offset;
-                    bottomLeft[1] -= offset;
-                    topRight[1] -= offset;
-                    state.pushesBottomTile = true;
-                    state.onOneWay = wasOneWay;
+                const newRef = { position: pos, topRight: tr, bottomLeft: bl, state: s }
+                if (!this.collidesWithTileBottom(newRef)) {
+                    ref.position[1] -= offset;
+                    ref.bottomLeft[1] -= offset;
+                    ref.topRight[1] -= offset;
+                    ref.state.pushesBottomTile = true;
+                    ref.state.onOneWay = wasOneWay;
                 }
             }
         }
@@ -208,44 +190,48 @@ export class MovingObject {
      * topRight: vec2,
      * bottomLeft: vec2,
      * state: PositionState,
-     * move: boolean
      * }} ref
      * @returns {boolean}
      */
-    collidesWithTileLeft({ position, topRight, bottomLeft, state, move }) {
-        const topRightTile = this.mMap.getMapTileAtPoint([topRight[0] - 0.5, topRight[1] - 0.5]);
+    collidesWithTileRight(ref, move = false) {
+        const topRightTile = this.mMap.getMapTileAtPoint(vec2.fromValues(ref.topRight[0] + 0.5, ref.topRight[1] - 0.5));
         vec2.floor(topRightTile, topRightTile);
-        const bottomLeftTile = this.mMap.getMapTileAtPoint([bottomLeft[0] - 0.5, bottomLeft[1] + 0.5]);
+        const bottomLeftTile = this.mMap.getMapTileAtPoint(vec2.fromValues(ref.bottomLeft[0] + 0.5, ref.bottomLeft[1] + 0.5));
         vec2.floor(bottomLeftTile, bottomLeftTile);
-        let slopeOffset = 0.0, oldSlopeOffset = 0.0;
+        let slopeOffset = 0.0;
+        let oldSlopeOffset = 0.0;
         let wasOneWay = false, isOneWay;
+
         /** @type {EnumValue<TileCollisionType>} */
         let slopeCollisionType = TileCollisionType.Empty;
         for (let y = bottomLeftTile[1]; y <= topRightTile[1]; ++y) {
-            const tileCollisionType = this.mMap.getCollisionType(bottomLeftTile[0], y);
-
+            const tileCollisionType = this.mMap.getCollisionType(topRightTile[0], y);
             isOneWay = Slopes.isOneWay(tileCollisionType);
-
-            if (isOneWay && (!move || this.mIgnoresOneWay || state.tmpIgnoresOneWay || y != bottomLeftTile[1]))
+            if (isOneWay && (!move || this.mIgnoresOneWay || ref.state.tmpIgnoresOneWay || y != bottomLeftTile[1]))
                 continue;
+
+
             switch (tileCollisionType) {
                 default://slope 
-                    const tileCenter = this.mMap.getMapTilePosition(bottomLeftTile[0], y);
+                    const tileCenter = this.mMap.getMapTilePosition(topRightTile[0], y);
                     const leftTileEdge = (tileCenter[0] - cTileSize / 2);
                     const rightTileEdge = (leftTileEdge + cTileSize);
                     const bottomTileEdge = (tileCenter[1] - cTileSize / 2);
+
+
                     oldSlopeOffset = slopeOffset;
-                    const offset = Slopes.getOffset6p(tileCenter, bottomLeft[0] - 0.5, topRight[0] - 0.5, bottomLeft[1] + 0.5, topRight[1] - 0.5, tileCollisionType);
+
+                    const offset = Slopes.getOffset6p(tileCenter, ref.bottomLeft[0] + 0.5, ref.topRight[0] + 0.5, ref.bottomLeft[1] + 0.5, ref.topRight[1] - 0.5, tileCollisionType);
                     slopeOffset = Math.abs(offset.freeUp) < Math.abs(offset.freeDown) ? offset.freeUp : offset.freeDown;
-                    if (!isOneWay && (Math.abs(slopeOffset) >= cSlopeWallHeight || (slopeOffset < 0 && state.pushesBottomTile) || (slopeOffset > 0 && state.pushesTopTile))) {
-                        state.pushesLeftTile = true;
-                        vec2.floor(state.leftTile, [bottomLeftTile[0], y]);
+                    if (!isOneWay && (Math.abs(slopeOffset) >= this.mSlopeWallHeight || (slopeOffset < 0 && ref.state.pushesBottomTile) || (slopeOffset > 0 && ref.state.pushesTopTile))) {
+                        ref.state.pushesRightTile = true;
+                        vec2.floor(ref.state.rightTile, [topRightTile[0], y]);
                         return true;
                     }
                     else if (Math.abs(slopeOffset) > Math.abs(oldSlopeOffset)) {
                         wasOneWay = isOneWay;
                         slopeCollisionType = tileCollisionType;
-                        vec2.floor(state.leftTile, [bottomLeftTile[0], y]);
+                        vec2.floor(ref.state.rightTile, [topRightTile[0], y]);
                     }
                     else
                         slopeOffset = oldSlopeOffset;
@@ -254,79 +240,66 @@ export class MovingObject {
                     break;
             }
         }
-        if (slopeCollisionType != TileCollisionType.Empty && slopeOffset != 0) {
-            if (slopeOffset > 0 && slopeOffset < cSlopeWallHeight) {
-                const pos = position, tr = topRight, bl = bottomLeft;
+        if (slopeCollisionType != TileCollisionType.Empty && slopeOffset != 0.0) {
+            if (slopeOffset > 0 && slopeOffset < this.mSlopeWallHeight) {
+                const pos = vec2.clone(ref.position);
+                const tr = vec2.clone(ref.topRight);
+                const bl = vec2.clone(ref.bottomLeft);
                 pos[1] += slopeOffset - sign(slopeOffset);
                 tr[1] += slopeOffset - sign(slopeOffset);
                 bl[1] += slopeOffset - sign(slopeOffset);
                 const s = new PositionState();
-                const ref = { position: pos, topRight: tr, bottomLeft: bl, state: s, move };
-                if (this.collidesWithTileTop(ref)) {
-                    state.pushesLeftTile = true;
+                const newRef = { position: pos, topRight: tr, bottomLeft: bl, state: s }
+                if (this.collidesWithTileTop(newRef)) {
+                    ref.state.pushesRightTile = true;
                     return true;
-                }
-                else if (move) {
-                    position[1] += slopeOffset;
-                    bottomLeft[1] += slopeOffset;
-                    topRight[1] += slopeOffset;
-                    state.pushesBottomTile = true;
-                    state.onOneWay = wasOneWay;
+                } else if (move) {
+                    ref.position[1] += slopeOffset;
+                    ref.bottomLeft[1] += slopeOffset;
+                    ref.topRight[1] += slopeOffset;
+                    ref.state.pushesBottomTile = true;
+                    ref.state.onOneWay = wasOneWay;
                 }
             }
-            else if (slopeOffset < 0 && slopeOffset > -cSlopeWallHeight) {
-                const pos = position, tr = topRight, bl = bottomLeft;
-                pos[1] += slopeOffset - sign(slopeOffset);
-                tr[1] += slopeOffset - sign(slopeOffset);
-                bl[1] += slopeOffset - sign(slopeOffset);
-                const s = new PositionState();
-                const ref = { position: pos, topRight: tr, bottomLeft: bl, state: s, move };
-                if (this.collidesWithTileBottom(ref)) {
-                    state.pushesLeftTile = true;
-                    return true;
-                }
-                else if (move) {
-                    position[1] += slopeOffset;
-                    bottomLeft[1] += slopeOffset;
-                    topRight[1] += slopeOffset;
-                    state.pushesTopTile = true;
-                    state.onOneWay = wasOneWay;
-                }
+            else if (slopeOffset < 0) {
+                ref.state.pushedRightTile = true;
+                return true;
             }
         }
-        if (this.mSticksToSlope && state.pushedBottomTile && move) {
-            const nextX = this.mMap.getMapTileXAtPoint(topRight[0] - 1.5);
-            const bottomY = this.mMap.getMapTileYAtPoint(bottomLeft[1] + 1.0) - 1;
+        if (ref.state.tmpSticksToSlope && ref.state.pushedBottomTile && move) {
+            const nextX = this.mMap.getMapTileXAtPoint(ref.bottomLeft[0] + 1.0);
+            const bottomY = this.mMap.getMapTileYAtPoint(ref.bottomLeft[1] + 1.0) - 1;
 
-            const prevPos = this.mMap.getMapTilePosition(topRightTile[0], bottomLeftTile[1]);
+            const prevPos = this.mMap.getMapTilePosition(bottomLeftTile[0], bottomLeftTile[1]);
             const nextPos = this.mMap.getMapTilePosition(nextX, bottomY);
-
-            const prevCollisionType = this.mMap.getCollisionType(topRightTile[0], bottomLeftTile[1]);
+            const prevCollisionType = this.mMap.getCollisionType(bottomLeftTile[0], bottomLeftTile[1]);
             const nextCollisionType = this.mMap.getCollisionType(nextX, bottomY);
 
-            const x1 = Math.floor(clamp((topRight[0] - 1.0 - (prevPos[0] - cTileSize / 2)), 0.0, 15.0));
-            const x2 = Math.floor(clamp((topRight[0] - 1.5 - (nextPos[0] - cTileSize / 2)), 0.0, 15.0));
+            const x1 = Math.floor(clamp((ref.bottomLeft[0] - (prevPos[0] - cTileSize / 2)), 0.0, cTileSize - 1));
+            const x2 = Math.floor(clamp((ref.bottomLeft[0] + 1.0 - (nextPos[0] - cTileSize / 2)), 0.0, cTileSize - 1));
 
             const slopeHeight = Slopes.getSlopeHeightFromBottom(x1, prevCollisionType);
             const nextSlopeHeight = Slopes.getSlopeHeightFromBottom(x2, nextCollisionType);
 
             const offset = slopeHeight + cTileSize - nextSlopeHeight;
 
-            if (offset < cSlopeWallHeight && offset > 0) {
-                const pos = position, tr = topRight, bl = bottomLeft;
+            if (offset < this.mSlopeWallHeight && offset > 0) {
+                const pos = vec2.clone(ref.position);
+                const tr = vec2.clone(ref.topRight);
+                const bl = vec2.clone(ref.bottomLeft);
                 pos[1] -= offset - sign(offset);
                 tr[1] -= offset - sign(offset);
                 bl[1] -= offset - sign(offset);
-                bl[0] -= 1.0;
-                tr[0] -= 1.0;
+                bl[0] += 1.0;
+                tr[0] += 1.0;
                 const s = new PositionState();
-                const ref = { position: pos, topRight: tr, bottomLeft: bl, state: s, move };
-                if (!this.collidesWithTileBottom(ref)) {
-                    position[1] -= offset;
-                    bottomLeft[1] -= offset;
-                    topRight[1] -= offset;
-                    state.pushesBottomTile = true;
-                    state.onOneWay = wasOneWay;
+                const newRef = { position: pos, topRight: tr, bottomLeft: bl, state: s }
+                if (!this.collidesWithTileBottom(newRef)) {
+                    ref.position[1] -= offset;
+                    ref.bottomLeft[1] -= offset;
+                    ref.topRight[1] -= offset;
+                    ref.state.pushesBottomTile = true;
+                    ref.state.onOneWay = wasOneWay;
                 }
             }
         }
@@ -342,9 +315,9 @@ export class MovingObject {
      * }} ref
      * @returns {boolean}
      */
-    collidesWithTileTop({ position, topRight, bottomLeft, state }) {
-        const topRightTile = this.mMap.getMapTileAtPoint(vec2.fromValues(topRight[0] - 0.5, topRight[1] + 0.5));
-        const bottomleftTile = this.mMap.getMapTileAtPoint(vec2.fromValues(bottomLeft[0] + 0.5, bottomLeft[1] + 0.5));
+    collidesWithTileTop(ref) {
+        const topRightTile = this.mMap.getMapTileAtPoint(vec2.fromValues(ref.topRight[0] - 0.5, ref.topRight[1] + 0.5));
+        const bottomleftTile = this.mMap.getMapTileAtPoint(vec2.fromValues(ref.bottomLeft[0] + 0.5, ref.bottomLeft[1] + 0.5));
         let freeDown = Infinity;
         let slopeX = -1;
         for (let x = bottomleftTile[0]; x <= topRightTile[0]; ++x) {
@@ -355,7 +328,7 @@ export class MovingObject {
             switch (tileCollisionType) {
                 default://slope
                     const tileCenter = this.mMap.getMapTilePosition(x, topRightTile[1]);
-                    const sf = Slopes.getOffset6p(tileCenter, bottomLeft[0] + 0.5, topRight[0] - 0.5, bottomLeft[1] + 0.5, topRight[1] + 0.5, tileCollisionType);
+                    const sf = Slopes.getOffset6p(tileCenter, ref.bottomLeft[0] + 0.5, ref.topRight[0] - 0.5, ref.bottomLeft[1] + 0.5, ref.topRight[1] + 0.5, tileCollisionType);
                     sf.freeDown += 1;
                     sf.collidingTop += 1;
                     if (sf.freeDown < freeDown && sf.freeDown <= 0 && sf.freeDown == sf.collidingTop) {
@@ -367,17 +340,17 @@ export class MovingObject {
                 case TileCollisionType.Empty:
                     break;
                 case TileCollisionType.Full:
-                    state.pushesTopTile = true;
-                    vec2.floor(state.topTile, [x, topRightTile[1]]);
+                    ref.state.pushesTopTile = true;
+                    vec2.floor(ref.state.topTile, [x, topRightTile[1]]);
                     return true;
             }
         }
         if (slopeX != -1) {
-            state.pushesTopTile = true;
-            vec2.floor(state.topTile, [slopeX, topRightTile[1]]);
-            position[1] += freeDown;
-            topRight[1] += freeDown;
-            bottomLeft[1] += freeDown;
+            ref.state.pushesTopTile = true;
+            vec2.floor(ref.state.topTile, [slopeX, topRightTile[1]]);
+            ref.position[1] += freeDown;
+            ref.topRight[1] += freeDown;
+            ref.bottomLeft[1] += freeDown;
             return true;
         }
 
@@ -393,18 +366,20 @@ export class MovingObject {
      * }} ref
      * @returns {boolean}
      */
-    collidesWithTileBottom({ position, topRight, bottomLeft, state }) {
-        const topRightTile = this.mMap.getMapTileAtPoint(vec2.fromValues(topRight[0] - 0.5, topRight[1] - 0.5));
-        const bottomleftTile = this.mMap.getMapTileAtPoint(vec2.fromValues(bottomLeft[0] + 0.5, bottomLeft[1] - 0.5));
+    collidesWithTileBottom(ref) {
+        const topRightTile = this.mMap.getMapTileAtPoint(vec2.fromValues(ref.topRight[0] - 0.5, ref.topRight[1] - 0.5));
+        const bottomleftTile = this.mMap.getMapTileAtPoint(vec2.fromValues(ref.bottomLeft[0] + 0.5, ref.bottomLeft[1] - 0.5));
         let collidingBottom = -Infinity;
         let slopeX = -1;
         let wasOneWay = false;
         let isOneWay;
         for (let x = bottomleftTile[0]; x <= topRightTile[0]; ++x) {
-            const tileCollisionType = this.mMap.getCollisionType(x, bottomleftTile[1]);
-            isOneWay = Slopes.isOneWay(tileCollisionType);
 
-            if ((this.mIgnoresOneWay || state.tmpIgnoresOneWay) && isOneWay)
+            const tileCollisionType = this.mMap.getCollisionType(x, bottomleftTile[1]);
+
+
+            isOneWay = Slopes.isOneWay(tileCollisionType);
+            if ((this.mIgnoresOneWay || ref.state.tmpIgnoresOneWay) && isOneWay)
                 continue;
 
             switch (tileCollisionType) {
@@ -412,14 +387,14 @@ export class MovingObject {
 
                     const tileCenter = this.mMap.getMapTilePosition(x, bottomleftTile[1]);
 
-                    const sf = Slopes.getOffset6p(tileCenter, bottomLeft[0] + 0.5, topRight[0] - 0.5, bottomLeft[1] - 0.5, topRight[1] - 0.5, tileCollisionType);
+                    const sf = Slopes.getOffset6p(tileCenter, ref.bottomLeft[0] + 0.5, ref.topRight[0] - 0.5, ref.bottomLeft[1] - 0.5, ref.topRight[1] - 0.5, tileCollisionType);
                     sf.freeUp -= 1;
                     sf.collidingBottom -= 1;
 
                     if (((sf.freeUp >= 0 && sf.collidingBottom == sf.freeUp)
-                        || (this.mSticksToSlope && state.pushedBottom && sf.freeUp - sf.collidingBottom < cSlopeWallHeight && sf.freeUp >= sf.collidingBottom))
+                        || (ref.state.tmpSticksToSlope && ref.state.pushedBottom && sf.freeUp - sf.collidingBottom < this.mSlopeWallHeight && sf.freeUp >= sf.collidingBottom))
                         && sf.collidingBottom >= collidingBottom
-                        && !(isOneWay && Math.abs(sf.collidingBottom) >= cSlopeWallHeight)) {
+                        && !(isOneWay && Math.abs(sf.collidingBottom) >= this.mSlopeWallHeight)) {
                         wasOneWay = isOneWay;
                         collidingBottom = sf.collidingBottom;
                         slopeX = x;
@@ -429,22 +404,23 @@ export class MovingObject {
                 case TileCollisionType.Empty:
                     break;
                 case TileCollisionType.Full:
-                    state.onOneWay = false;
-                    state.pushesBottomTile = true;
-                    vec2.floor(state.bottomTile, [x, bottomleftTile[1]]);
-                    state.tmpIgnoresOneWay = false;
+                    ref.state.onOneWay = false;
+                    ref.state.pushesBottomTile = true;
+                    vec2.floor(ref.state.bottomTile, [x, bottomleftTile[1]]);
+                    ref.state.tmpIgnoresOneWay = false;
                     return true;
             }
         }
-
-        if (slopeX != -1) {
-            state.onOneWay = wasOneWay;
-            state.oneWayY = bottomleftTile[1];
-            state.pushesBottomTile = true;
-            vec2.floor(state.bottomTile, [slopeX, bottomleftTile[1]]);
-            position[1] += collidingBottom;
-            topRight[1] += collidingBottom;
-            bottomLeft[1] += collidingBottom;
+        if (slopeX != -1 && (ref.state.tmpSticksToSlope || collidingBottom >= 0)) {
+            if (ref.state.tmpSticksToSlope) {
+                ref.state.onOneWay = wasOneWay;
+                ref.state.oneWayY = bottomleftTile[1];
+                ref.state.pushesBottomTile = true;
+                vec2.floor(ref.state.bottomTile, [slopeX, bottomleftTile[1]]);
+            }
+            ref.position[1] += collidingBottom;
+            ref.topRight[1] += collidingBottom;
+            ref.bottomLeft[1] += collidingBottom;
             return true;
         }
 
@@ -453,28 +429,27 @@ export class MovingObject {
     }
     /**
      * 
+     * @param {number} offset
+     * @param {number} step
      * @param {{
      * position: vec2,
      * foundObstacleX: boolean,
-     * offset: number,
-     * step: number,
      * topRight: vec2,
      * bottomLeft: vec2,
      * state: PositionState,
-     * move: boolean
      * }} ref
      */
-    moveX(ref) {
-        while (!ref.foundObstacleX && ref.offset != 0.0) {
-            ref.offset -= ref.step;
-            if (ref.step > 0.0)
-                ref.foundObstacleX = this.collidesWithTileRight(ref);
+    moveX(offset, step, ref) {
+        while (!ref.foundObstacleX && offset != 0.0) {
+            offset -= step;
+            if (step > 0.0)
+                ref.foundObstacleX = this.collidesWithTileRight(ref, true);
             else
-                ref.foundObstacleX = this.collidesWithTileLeft(ref);
+                ref.foundObstacleX = this.collidesWithTileLeft(ref, true);
             if (!ref.foundObstacleX) {
-                ref.position[0] += ref.step;
-                ref.topRight[0] += ref.step;
-                ref.bottomLeft[0] += ref.step;
+                ref.position[0] += step;
+                ref.topRight[0] += step;
+                ref.bottomLeft[0] += step;
                 this.collidesWithTileTop(ref);
                 this.collidesWithTileBottom(ref);
             }
@@ -482,32 +457,32 @@ export class MovingObject {
     }
     /**
      * 
+     * @param {number} offset
+     * @param {number} step
      * @param {{
      * position: vec2,
      * foundObstacleY: boolean,
-     * offset: number,
-     * step: number,
      * topRight: vec2,
      * bottomLeft: vec2,
      * state: PositionState,
-     * move: boolean
      * }} ref
      */
-    moveY(ref) {
-        while (!ref.foundObstacleY && ref.offset != 0.0) {
-            ref.offset -= ref.step;
-            if (ref.step > 0.0)
+    moveY(offset, step, ref) {
+        while (!ref.foundObstacleY && offset != 0.0) {
+            offset -= step;
+            if (step > 0.0)
                 ref.foundObstacleY = this.collidesWithTileTop(ref);
             else
                 ref.foundObstacleY = this.collidesWithTileBottom(ref);
             if (!ref.foundObstacleY) {
-                ref.position[1] += ref.step;
-                ref.topRight[1] += ref.step;
-                ref.bottomLeft[1] += ref.step;
+                ref.position[1] += step;
+                ref.topRight[1] += step;
+                ref.bottomLeft[1] += step;
                 this.collidesWithTileLeft(ref);
                 this.collidesWithTileRight(ref);
             }
         }
+
     }
     /**
      * 
@@ -518,13 +493,10 @@ export class MovingObject {
      * position: vec2,
      * foundObstacleX: boolean,
      * foundObstacleY: boolean,
-     * offset: number,
-     * step: number,
      * topRight: vec2,
      * bottomLeft: vec2,
      * state: PositionState,
      * remainder: vec2,
-     * move: boolean
      * }} ref
      * @returns 
      */
@@ -537,14 +509,13 @@ export class MovingObject {
         ref.foundObstacleX = false;
         ref.foundObstacleY = false;
         const step = vec2.fromValues(sign(offset[0]), sign(offset[1]));
+
         const move = vec2.fromValues(Math.round(ref.remainder[0]), Math.round(ref.remainder[1]));
         vec2.sub(ref.remainder, ref.remainder, move);
         if (move[0] == 0.0 && move[1] == 0.0)
             return;
         else if (move[0] != 0.0 && move[1] == 0.0) {
-            ref.offset = move[0];
-            ref.step = step[0];
-            this.moveX(ref);
+            this.moveX(move[0], step[0], ref);
             if (step[0] > 0.0)
                 ref.state.pushesLeftTile = this.collidesWithTileLeft(ref);
             else
@@ -553,13 +524,13 @@ export class MovingObject {
         }
         else if (move[1] != 0.0 && move[0] == 0.0) {
 
-            ref.offset = move[1];
-            ref.step = step[1];
-            this.moveY(ref);
-            if (step[1] > 0.0)
+            this.moveY(move[1], step[1], ref);
+            if (step[1] > 0.0) {
                 ref.state.pushesBottomTile = this.collidesWithTileBottom(ref);
-            else
+            }
+            else {
                 ref.state.pushesTopTile = this.collidesWithTileTop(ref);
+            }
             if (!this.mIgnoresOneWay && ref.state.tmpIgnoresOneWay && this.mMap.getMapTileYAtPoint(ref.bottomLeft[1] - 0.5) != ref.state.oneWayY)
                 ref.state.tmpIgnoresOneWay = false;
         }
@@ -568,16 +539,12 @@ export class MovingObject {
             let vertAccum = 0.0;
             while (!ref.foundObstacleX && !ref.foundObstacleY && (move[0] != 0.0 || move[1] != 0.0)) {
                 vertAccum += sign(step[1]) * speedRatio;
-                ref.offset = step[0];
-                ref.step = step[0];
-                this.moveX(ref);
+                this.moveX(step[0], step[0], ref);
                 move[0] -= step[0];
                 while (!ref.foundObstacleY && move[1] != 0.0 && (Math.abs(vertAccum) >= 1.0 || move[0] == 0.0)) {
                     move[1] -= step[1];
                     vertAccum -= step[1];
-                    ref.offset = step[1];
-                    ref.step = step[1];
-                    this.moveY(ref);
+                    this.moveY(step[1], step[1], ref);
                 }
             }
             if (step[0] > 0.0)
@@ -605,7 +572,6 @@ export class MovingObject {
         this.mPS.pushesRightObject = false;
         this.mPS.pushesLeftObject = false;
         this.mPS.pushesTopObject = false;
-
         const offsetSum = vec2.create();
         for (let i = 0; i < this.mAllCollidingObjects.length; ++i) {
             const other = this.mAllCollidingObjects[i].other;
@@ -690,27 +656,24 @@ export class MovingObject {
 
 
     }
-    updatePhysicsP2() {
-        this.updatePhysicsResponse();
-        this.mPS.pushesBottom = this.mPS.pushesBottomTile || this.mPS.pushesBottomObject;
-        this.mPS.pushesRight = this.mPS.pushesRightTile || this.mPS.pushesRightObject;
-        this.mPS.pushesLeft = this.mPS.pushesLeftTile || this.mPS.pushesLeftObject;
-        this.mPS.pushesTop = this.mPS.pushesTopTile || this.mPS.pushesTopObject;
-        //update the aabb 
-        vec2.add(this.mAABB.center, this.mPosition, this.aabbOffset);
-    }
     updatePhysics() {
         this.mPS.pushedBottom = this.mPS.pushesBottom;
         this.mPS.pushedRight = this.mPS.pushesRight;
         this.mPS.pushedLeft = this.mPS.pushesLeft;
         this.mPS.pushedTop = this.mPS.pushesTop;
+
         this.mPS.pushedBottomTile = this.mPS.pushesBottomTile;
         this.mPS.pushedLeftTile = this.mPS.pushesLeftTile;
         this.mPS.pushedRightTile = this.mPS.pushesRightTile;
         this.mPS.pushedTopTile = this.mPS.pushesTopTile;
-        this.mPS.pushesBottom = this.mPS.pushesLeft = this.mPS.pushesRight = this.mPS.pushesTop =
-            this.mPS.pushesBottomTile = this.mPS.pushesLeftTile = this.mPS.pushesRightTile = this.mPS.pushesTopTile =
-            this.mPS.pushesBottomObject = this.mPS.pushesLeftObject = this.mPS.pushesRightObject = this.mPS.pushesTopObject = this.mPS.onOneWayPlatform = false;
+
+        this.mPS.pushesBottomTile = this.mPS.pushesBottom;
+        this.mPS.pushesTopTile = this.mPS.pushesTop;
+        this.mPS.pushesRightTile = this.mPS.pushesRight;
+        this.mPS.pushesLeftTile = this.mPS.pushesLeft;
+
+        this.mPS.pushesBottomTile = this.mPS.pushesLeftTile = this.mPS.pushesRightTile = this.mPS.pushesTopTile =
+            this.mPS.pushesBottomObject = this.mPS.pushesLeftObject = this.mPS.pushesRightObject = this.mPS.pushesTopObject = false;
 
         const ref = {
             position: this.mPosition,
@@ -726,7 +689,7 @@ export class MovingObject {
             step: 0
         }
         this.collidesWithTiles(ref);
-        this.mOldSpeed = this.mSpeed;
+        vec2.copy(this.mOldSpeed, this.mSpeed);
         if (this.mPS.pushesBottomTile)
             this.mSpeed[1] = Math.max(0.0, this.mSpeed[1]);
         if (this.mPS.pushesTopTile)
@@ -746,6 +709,16 @@ export class MovingObject {
         this.mPS.pushesRight = this.mPS.pushesRightTile;
         this.mPS.pushesLeft = this.mPS.pushesLeftTile;
         this.mPS.pushesTop = this.mPS.pushesTopTile;
+    }
+    updatePhysicsP2() {
+        this.updatePhysicsResponse();
+
+        this.mPS.pushesBottom = this.mPS.pushesBottomTile || this.mPS.pushesBottomObject;
+        this.mPS.pushesRight = this.mPS.pushesRightTile || this.mPS.pushesRightObject;
+        this.mPS.pushesLeft = this.mPS.pushesLeftTile || this.mPS.pushesLeftObject;
+        this.mPS.pushesTop = this.mPS.pushesTopTile || this.mPS.pushesTopObject;
+        //update the aabb 
+        vec2.copy(this.mAABB.center, this.mPosition);
     }
     /**
      * 
@@ -776,207 +749,6 @@ export class MovingObject {
         }
         return false;
     }
-    /**
-     * 
-     * @param {vec2} oldPosition 
-     * @param {vec2} position 
-     * @param {vec2} speed 
-     * @param {{groundY: number, onOneWayPlatform: boolean}} out 
-     * @returns {boolean}
-     */
-    hasGround(oldPosition, position, speed, out) {
-        const oldCenter = vec2.create();
-        vec2.add(oldCenter, oldPosition, this.aabbOffset);
-        const center = vec2.create();
-        vec2.add(center, position, this.aabbOffset);
-        const oldBottomLeft = vec2.create();
-        vec2.sub(oldBottomLeft, oldCenter, this.mAABB.halfSize);
-        vec2.sub(oldBottomLeft, oldBottomLeft, vec2.fromValues(0.0, 1.0));
-        vec2.add(oldBottomLeft, oldBottomLeft, vec2.fromValues(1.0, 0.0));
-        vec2.round(oldBottomLeft, oldBottomLeft);
-        const newBottomLeft = vec2.create();
-        vec2.sub(newBottomLeft, center, this.mAABB.halfSize);
-        vec2.sub(newBottomLeft, newBottomLeft, vec2.fromValues(0.0, 1.0));
-        vec2.add(newBottomLeft, newBottomLeft, vec2.fromValues(1.0, 0.0));
-        vec2.round(newBottomLeft, newBottomLeft);
-        const newBottomRight = vec2.create();
-        newBottomRight[0] = newBottomLeft[0] + this.mAABB.halfSize[0] * 2.0 - 2.0;
-        newBottomRight[1] = newBottomLeft[1];
-        vec2.round(newBottomRight, newBottomRight);
-        const endY = this.mMap.getMapTileYAtPoint(newBottomLeft[1]);
-        const begY = Math.max(this.mMap.getMapTileYAtPoint(oldBottomLeft[1]) - 1, endY);
-        const dist = Math.max(Math.abs(endY - begY), 1);
-        let tileIndexX;
-        for (let tileIndexY = begY; tileIndexY >= endY; --tileIndexY) {
-            const bottomLeft = lerpVec2(newBottomLeft, oldBottomLeft, Math.abs(endY - tileIndexY) / dist);
-            const bottomRight = vec2.fromValues(bottomLeft[0] + this.mAABB.halfSize[0] * 2.0 - 2.0, bottomLeft[1]);
-            const checkedTile = vec2.create();
-            vec2.copy(checkedTile, bottomLeft);
-            for (; ; checkedTile[0] += cTileSize) {
-                checkedTile[0] = Math.min(checkedTile[0], bottomRight[0]);
 
-                tileIndexX = this.mMap.getMapTileXAtPoint(checkedTile[0]);
 
-                out.groundY = tileIndexY * cTileSize + cTileSize / 2.0 + this.mMap.mPosition[1];
-                if (this.mMap.isObstacle(tileIndexX, tileIndexY)) {
-                    out.onOneWayPlatform = false;
-                    return true;
-                } else if (this.mMap.isOneWayPlatform(tileIndexX, tileIndexY)
-                    && Math.abs(checkedTile[1] - out.groundY) <= cOneWayPlatformThreshold + oldPosition[1] - position[1]) {
-                    out.onOneWayPlatform = true;
-                }
-                if (checkedTile[0] >= bottomRight[0]) {
-                    if (out.onOneWayPlatform) {
-                        return true;
-                    }
-                    break;
-                }
-            }
-        }
-        return false;
-    }
-    /**
-     * 
-     * @param {vec2} oldPosition 
-     * @param {vec2} position 
-     * @param {{ceilingY: number}} out 
-     * @returns {boolean}
-     */
-    hasCeiling(oldPosition, position, out) {
-        const center = vec2.add(vec2.create(), position, this.aabbOffset);
-        const oldCenter = vec2.add(vec2.create(), oldPosition, this.aabbOffset);
-        out.ceilingY = 0.0;
-        const oldTopRight = vec2.add(vec2.create(), oldCenter, this.mAABB.halfSize);
-        vec2.add(oldTopRight, oldTopRight, vec2.fromValues(0.0, 1.0));
-        vec2.sub(oldTopRight, oldTopRight, vec2.fromValues(1.0, 0.0));
-        vec2.round(oldTopRight, oldTopRight);
-        const newTopRight = vec2.add(vec2.create(), center, this.mAABB.halfSize);
-        vec2.add(newTopRight, newTopRight, vec2.fromValues(0.0, 1.0));
-        vec2.sub(newTopRight, newTopRight, vec2.fromValues(1.0, 0.0));
-        vec2.round(newTopRight, newTopRight);
-        const newTopLeft = vec2.create();
-        newTopLeft[0] = newTopRight[0] - this.mAABB.halfSize[0] * 2.0 + 2.0;
-        newTopLeft[1] = newTopRight[1];
-        vec2.round(newTopLeft, newTopLeft);
-        const endY = this.mMap.getMapTileYAtPoint(newTopRight[1]);
-        const begY = Math.min(this.mMap.getMapTileYAtPoint(oldTopRight[1]) + 1, endY);
-        const dist = Math.max(Math.abs(endY - begY), 1);
-        let tileIndexX;
-        for (let tileIndexY = begY; tileIndexY <= endY; ++tileIndexY) {
-            const topRight = lerpVec2(newTopRight, oldTopRight, Math.abs(endY - tileIndexY) / dist);
-            const topLeft = vec2.fromValues(topRight[0] - this.mAABB.halfSize[0] * 2.0 + 2.0, topRight[1]);
-            const checkedTile = vec2.create();
-            vec2.copy(checkedTile, topLeft);
-            for (; ; checkedTile[0] += cTileSize) {
-                checkedTile[0] = Math.min(checkedTile[0], topRight[0]);
-                tileIndexX = this.mMap.getMapTileXAtPoint(checkedTile[0]);
-                if (this.mMap.isObstacle(tileIndexX, tileIndexY)) {
-                    out.ceilingY = tileIndexY * cTileSize - cTileSize / 2.0 + this.mMap.mPosition[1];
-                    return true;
-                }
-                if (checkedTile[0] >= topRight[0]) {
-                    break;
-                }
-            }
-        }
-        return false;
-    }
-
-    /**
-     * 
-     * @param {vec2} oldPosition 
-     * @param {vec2} position 
-     * @param {{wallX: number}} out 
-     * @returns {boolean}
-     */
-    collidesWithLeftWall(oldPosition, position, out) {
-        const center = vec2.add(vec2.create(), position, this.aabbOffset);
-        const oldCenter = vec2.add(vec2.create(), oldPosition, this.aabbOffset);
-        out.wallX = 0.0;
-        const oldBottomLeft = vec2.sub(vec2.create(), oldCenter, this.mAABB.halfSize);
-        vec2.sub(oldBottomLeft, oldBottomLeft, vec2.fromValues(1.0, 0.0));
-        vec2.round(oldBottomLeft, oldBottomLeft);
-        const newBottomLeft = vec2.sub(vec2.create(), center, this.mAABB.halfSize);
-        vec2.sub(newBottomLeft, newBottomLeft, vec2.fromValues(1.0, 0.0));
-        vec2.round(newBottomLeft, newBottomLeft);
-        const newTopLeft = vec2.add(vec2.create(), newBottomLeft, vec2.fromValues(0.0, this.mAABB.halfSize[1] * 2.0));
-        vec2.round(newTopLeft, newTopLeft);
-        const endX = this.mMap.getMapTileXAtPoint(newBottomLeft[0]);
-        const begX = Math.max(this.mMap.getMapTileXAtPoint(oldBottomLeft[0]) - 1, endX);
-        const dist = Math.max(Math.abs(endX - begX), 1);
-        let tileIndexY;
-        for (let tileIndexX = begX; tileIndexX >= endX; --tileIndexX) {
-            const bottomLeft = lerpVec2(newBottomLeft, oldBottomLeft, Math.abs(endX - tileIndexX) / dist);
-            const topLeft = vec2.add(vec2.create(), bottomLeft, vec2.fromValues(0.0, this.mAABB.halfSize[1] * 2.0));
-            const checkedTile = vec2.create();
-            vec2.copy(checkedTile, bottomLeft);
-            for (; ; checkedTile[1] += cTileSize) {
-                checkedTile[1] = Math.min(checkedTile[1], topLeft[1]);
-                tileIndexY = this.mMap.getMapTileYAtPoint(checkedTile[1]);
-                if (this.mMap.isObstacle(tileIndexX, tileIndexY)) {
-                    out.wallX = tileIndexX * cTileSize + cTileSize / 2.0 + this.mMap.mPosition[0];
-                    return true;
-                }
-                if (checkedTile[1] >= topLeft[1]) {
-                    break;
-                }
-            }
-        }
-        return false;
-    }
-
-    /**
-     * 
-     * @param {vec2} oldPosition 
-     * @param {vec2} position 
-     * @param {{wallX: number}} out 
-     * @returns {boolean}
-     */
-
-    collidesWithRightWall(oldPosition, position, out) {
-        const center = vec2.add(vec2.create(), position, this.aabbOffset);
-        const oldCenter = vec2.add(vec2.create(), oldPosition, this.aabbOffset);
-        out.wallX = 0.0;
-        const oldBottomRight = vec2.add(vec2.create(), oldCenter, [this.mAABB.halfSize[0], -this.mAABB.halfSize[1]]);
-        vec2.add(oldBottomRight, oldBottomRight, vec2.fromValues(1.0, 0.0));
-        vec2.round(oldBottomRight, oldBottomRight);
-        const newBottomRight = vec2.add(vec2.create(), center, [this.mAABB.halfSize[0], -this.mAABB.halfSize[1]]);
-        vec2.add(newBottomRight, newBottomRight, vec2.fromValues(1.0, 0.0));
-        vec2.round(newBottomRight, newBottomRight);
-        const newTopRight = vec2.add(vec2.create(), newBottomRight, vec2.fromValues(0.0, this.mAABB.halfSize[1] * 2.0));
-        vec2.round(newTopRight, newTopRight);
-        const endX = this.mMap.getMapTileXAtPoint(newBottomRight[0]);
-        const begX = Math.min(this.mMap.getMapTileXAtPoint(oldBottomRight[0]) + 1, endX);
-        const dist = Math.max(Math.abs(endX - begX), 1);
-        let tileIndexY;
-        for (let tileIndexX = begX; tileIndexX <= endX; ++tileIndexX) {
-            const bottomRight = lerpVec2(newBottomRight, oldBottomRight, Math.abs(endX - tileIndexX) / dist);
-            const topRight = vec2.add(vec2.create(), bottomRight, vec2.fromValues(0.0, this.mAABB.halfSize[1] * 2.0));
-            const checkedTile = vec2.create();
-            vec2.copy(checkedTile, bottomRight);
-            for (; ; checkedTile[1] += cTileSize) {
-                checkedTile[1] = Math.min(checkedTile[1], topRight[1]);
-                tileIndexY = this.mMap.getMapTileYAtPoint(checkedTile[1]);
-                if (this.mMap.isObstacle(tileIndexX, tileIndexY)) {
-                    out.wallX = tileIndexX * cTileSize - cTileSize / 2.0 + this.mMap.mPosition[0];
-                    return true;
-                }
-                if (checkedTile[1] >= topRight[1]) {
-                    break;
-                }
-            }
-        }
-        return false;
-    }
-
-}
-/**
- * 
- * @param {vec2} a 
- * @param {vec2} b 
- * @param {number} t 
- * @returns {vec2}
- */
-function lerpVec2(a, b, t) {
-    return vec2.fromValues(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t);
 }

@@ -1,24 +1,22 @@
 import { Animator } from "../component/Animator.js";
 import { AudioSource } from "../component/AudioSource.js";
 import { vec2 } from "../libs.js";
-import { cGrabLedgeEndY, cGrabLedgeStartY, cGrabLedgeTileOffsetY, cGravity, cHalfSizeX, cHalfSizeY, cJumpFramesThreshold, cJumpSpeed, cMaxFallingSpeed, cMinJumpSpeed, cOneWayPlatformThreshold, cTileSize, cWalkSfxTime, cWalkSpeed } from "../misc/constants.js";
+import { cGrabLedgeEndY, cGrabLedgeStartY, cGrabLedgeTileOffsetY, cGravity, cHalfSizeX, cHalfSizeY, cJumpFramesThreshold, cJumpSpeed, cMaxFallingSpeed, cMinJumpSpeed, cOneWayPlatformThreshold, cSlopeWallHeight, cTileSize, cWalkSfxTime, cWalkSpeed } from "../misc/constants.js";
 import { CharacterState, KeyInput, ObjectType, TileType } from "../misc/enums.js";
 import { sign } from "../misc/math.js";
 import { AudioClip } from "./AudioClip.js";
 import { Map } from "./Map.js";
 import { MovingObject } from "./MovingObject.js";
 export class Character extends MovingObject {
-    /** @param {Map} map */
-    constructor(map) {
+    /**
+     * @param {Map} map
+     * @param {EnumSet<typeof KeyInput>} inputs 
+     * @param {EnumSet<typeof KeyInput>} prevInputs 
+     */
+    constructor(map, inputs = new Set, prevInputs = new Set) {
         super(map);
-        /**
-         * @type {EnumSet<typeof KeyInput>}
-         */
-        this.mInputs = new Set();
-        /**
-         * @type {EnumSet<typeof KeyInput>}
-         */
-        this.mPrevInputs = new Set();
+        this.mInputs = inputs;
+        this.mPrevInputs = prevInputs;
         /**
          * @type {EnumValue<typeof CharacterState>}
          */
@@ -35,6 +33,13 @@ export class Character extends MovingObject {
         this.mCannotGoLeftFrames = 0;
         this.mCannotGoRightFrames = 0;
         this.mFramesFromJumpStart = 0;
+        this.mSlopeWallHeight = cSlopeWallHeight;
+    }
+    jump() {
+        this.mSpeed[1] = this.mJumpSpeed;
+        this.mPS.tmpSticksToSlope = false;
+        this.mAudioSource.playOneShot(this.mJumpSfx, 1.0);
+        this.mCurrentState = CharacterState.Jump;
     }
     customUpdate() {
         if (this.keyState(KeyInput.ScaleUp)) {
@@ -54,9 +59,7 @@ export class Character extends MovingObject {
                     this.mCurrentState = CharacterState.Walk;
                     break;
                 } else if (this.keyState(KeyInput.Jump)) {
-                    this.mSpeed[1] = this.mJumpSpeed;
-                    this.mAudioSource.playOneShot(this.mJumpSfx, 1.0);
-                    this.mCurrentState = CharacterState.Jump;
+                    this.jump();
                     break;
                 }
                 if (this.keyState(KeyInput.GoDown)) {
@@ -66,12 +69,11 @@ export class Character extends MovingObject {
             case CharacterState.Walk:
                 this.mAnimator.play("Walk");
                 this.mWalkSfxTimer += this.deltaTime;
-                
-                if (this.mWalkSfxTimer > cWalkSfxTime)
-                    {
-                        this.mWalkSfxTimer = 0.0;
-                        this.mAudioSource.playOneShot(this.mWalkSfx, 1);
-                    }
+
+                if (this.mWalkSfxTimer > cWalkSfxTime) {
+                    this.mWalkSfxTimer = 0.0;
+                    this.mAudioSource.playOneShot(this.mWalkSfx, 1);
+                }
                 if (this.keyState(KeyInput.GoRight) === this.keyState(KeyInput.GoLeft)) {
                     this.mCurrentState = CharacterState.Stand;
                     vec2.zero(this.mSpeed);
@@ -90,9 +92,7 @@ export class Character extends MovingObject {
                     this.scale[0] = Math.abs(this.scale[0]);
                 }
                 if (this.keyState(KeyInput.Jump)) {
-                    this.mSpeed[1] = this.mJumpSpeed;
-                    this.mAudioSource.playOneShot(this.mJumpSfx, 1.0);
-                    this.mCurrentState = CharacterState.Jump;
+                    this.jump();
                     break;
                 } else if (!this.mPS.pushesBottom) {
                     this.mCurrentState = CharacterState.Jump;
@@ -121,13 +121,13 @@ export class Character extends MovingObject {
                 if (this.keyState(KeyInput.GoRight) === this.keyState(KeyInput.GoLeft)) {
                     this.mSpeed[0] = 0.0;
                 } else if (this.keyState(KeyInput.GoRight)) {
-                    if (this.mPS.pushesRight)
+                    if (this.mPS.pushesRightTile)
                         this.mSpeed[0] = 0.0;
                     else
                         this.mSpeed[0] = this.mWalkSpeed;
                     this.scale[0] = -Math.abs(this.scale[0]);
                 } else if (this.keyState(KeyInput.GoLeft)) {
-                    if (this.mPS.pushesLeft)
+                    if (this.mPS.pushesLeftTile)
                         this.mSpeed[0] = 0.0;
                     else
                         this.mSpeed[0] = -this.mWalkSpeed;
@@ -162,6 +162,7 @@ export class Character extends MovingObject {
                     && !this.mPS.pushesTop
                     && ((this.mPS.pushesRight && this.keyState(KeyInput.GoRight)) || (this.mPS.pushesLeft && this.keyState(KeyInput.GoLeft)))) {
                     const aabbCornerOffset = vec2.create();
+                    
                     if (this.mPS.pushesRight && this.keyState(KeyInput.GoRight))
                         vec2.copy(aabbCornerOffset, this.mAABB.halfSize);
                     else
@@ -170,7 +171,7 @@ export class Character extends MovingObject {
                     let topY;
                     let bottomY;
                     if ((this.mPS.pushedLeft && this.mPS.pushesLeft) || (this.mPS.pushedRight && this.mPS.pushesRight)) {
-                        topY = this.mMap.getMapTileYAtPoint(this.mOldPosition[1] + this.aabbOffset[1] + aabbCornerOffset[1] - cGrabLedgeStartY);
+                        topY = this.mMap.getMapTileYAtPoint(this.mOldPosition[1] + aabbCornerOffset[1] - cGrabLedgeStartY);
                         bottomY = this.mMap.getMapTileYAtPoint(this.mAABB.center[1] + aabbCornerOffset[1] - cGrabLedgeEndY);
                     }
                     else {
@@ -186,8 +187,8 @@ export class Character extends MovingObject {
                             if (y > bottomY ||
                                 ((this.mAABB.center[1] + aabbCornerOffset[1]) - tileCorner[1] <= cGrabLedgeEndY
                                     && tileCorner[1] - (this.mAABB.center[1] + aabbCornerOffset[1]) >= cGrabLedgeStartY)) {
-                                vec2.set(this.mLedgeTile, tileX, y - 1);
-                                this.mPosition[1] = tileCorner[1] - aabbCornerOffset[1] - this.aabbOffset[1] - cGrabLedgeStartY + cGrabLedgeTileOffsetY;
+                                vec2.floor(this.mLedgeTile, [tileX, y - 1]);
+                                this.mPosition[1] = tileCorner[1] - aabbCornerOffset[1] - cGrabLedgeStartY + cGrabLedgeTileOffsetY;
                                 vec2.zero(this.mSpeed)
                                 this.mCurrentState = CharacterState.GrabLedge;
                                 this.mAnimator.play("GrabLedge");
@@ -230,21 +231,14 @@ export class Character extends MovingObject {
             this.mAudioSource.playOneShot(this.mHitWallSfx, 0.5);
         this.updatePrevInputs();
     }
-    /**
-     * 
-     * @param {EnumSet<typeof KeyInput>} inputs 
-     * @param {EnumSet<typeof KeyInput>} prevInputs 
-     */
-    init(inputs, prevInputs) {
+    init() {
         this.scale = vec2.fromValues(1, 1);
-        this.mInputs = inputs;
-        this.mPrevInputs = prevInputs;
-        this.mPosition = this.position;
+        vec2.copy(this.mPosition, this.position);
         this.mAABB.halfSize = [cHalfSizeX, cHalfSizeY];
-        this.aabbOffset = [0, this.mAABB.halfSize[1]];
 
         this.mJumpSpeed = cJumpSpeed;
         this.mWalkSpeed = cWalkSpeed;
+        this.mSlopeWallHeight = cSlopeWallHeight;
 
     }
 
