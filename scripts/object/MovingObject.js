@@ -21,10 +21,8 @@ export class MovingObject {
     }
     /** @param {number} value  */
     set alpha(value) {
-        vec2.copy(this.mPositionRender, this.mPosition);
-        const newPosition = vec2.lerp(vec2.create(), this.mPositionPrev, this.mPositionRender, value);
-        vec2.copy(this.mPositionPrev, this.mPositionRender);
-        this.mPositionRender = newPosition;
+        vec2.lerp(this.mPositionRender, this.mPositionPrev, this.mPosition, value);
+        vec2.copy(this.mPositionPrev, this.mPosition);
         this.mAlpha = value;
     }
     /** @param {Map} map */
