@@ -1,7 +1,7 @@
 export const cGravity = -1030;
 export const cMaxFallingSpeed = -900;
 
-export const cWalkSpeed = 160.0;
+export const cWalkSpeed = 4.0;
 export const cJumpSpeed = 410.0;
 export const cMinJumpSpeed = 200.0;
 export const cHalfSizeY = 20.0;

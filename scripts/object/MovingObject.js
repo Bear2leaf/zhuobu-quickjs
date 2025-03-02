@@ -1,4 +1,4 @@
-import { vec2, vec3 } from "../libs.js";
+import { getScreenHeight, vec2, vec3 } from "../libs.js";
 import { cTileSize } from "../misc/constants.js";
 import { ObjectType, TileCollisionType } from "../misc/enums.js";
 import { clamp, sign } from "../misc/math.js";
@@ -10,7 +10,7 @@ import { Slopes } from "./Slopes.js";
 
 export class MovingObject {
     get position() {
-        return vec2.round(vec2.create(), this.mPosition);
+        return vec2.lerp(vec2.create(), this.mPositionRenderPrev, this.mPositionRender, this.mAlpha);
     }
     get scale() {
         return vec2.fromValues(this.mScale[0], this.mScale[1]);
@@ -19,9 +19,17 @@ export class MovingObject {
         this.mScale = vec2.fromValues(value[0], value[1]);
         this.mAABB.scale = [Math.abs(this.mScale[0]), Math.abs(this.mScale[1])];
     }
+    /** @param {number} value  */
+    set alpha(value) {
+        vec2.copy(this.mPositionRenderPrev, this.mPositionRender);
+        vec2.set(this.mPositionRender, this.mPosition[0] + this.mReminder[0], this.mPosition[1] + this.mReminder[1]);
+        this.mAlpha = value;
+    }
     /** @param {Map} map */
     constructor(map) {
-
+        this.mAlpha = 0;
+        this.mPositionRender = vec2.create();
+        this.mPositionRenderPrev = vec2.create();
         this.mOldPosition = vec2.create();
         this.mPosition = vec2.create();
         this.mReminder = vec2.create();
@@ -673,6 +681,7 @@ export class MovingObject {
 
     }
     updatePhysics() {
+        vec2.copy(this.mOldPosition, this.mPosition);
         this.mPS.pushedBottom = this.mPS.pushesBottom;
         this.mPS.pushedRight = this.mPS.pushesRight;
         this.mPS.pushedLeft = this.mPS.pushesLeft;
@@ -707,7 +716,6 @@ export class MovingObject {
             this.mSpeed[0] = Math.max(0.0, this.mSpeed[0]);
         if (this.mPS.pushesRightTile)
             this.mSpeed[0] = Math.min(0.0, this.mSpeed[0]);
-        vec2.copy(this.mOldPosition, this.mPosition);
 
 
         vec2.scale(this.mOffset, this.mSpeed, this.deltaTime);
@@ -720,12 +728,12 @@ export class MovingObject {
             }
         }
 
-        vec2.add(this.mPosition, this.mPosition, vec2.round(vec2.create(), vec2.add(vec2.create(), this.mOffset, this.mReminder)));
+        vec2.add(this.mPosition, this.mPosition, vec2.add(vec2.create(), this.mOffset, this.mReminder));
 
         vec2.copy(this.mAABB.center, this.mPosition);
     }
     updatePhysicsP2() {
-        vec2.sub(this.mPosition, this.mPosition, vec2.round(vec2.create(), vec2.add(vec2.create(), this.mOffset, this.mReminder)));
+        vec2.sub(this.mPosition, this.mPosition, vec2.add(vec2.create(), this.mOffset, this.mReminder));
         vec2.copy(this.mAABB.center, this.mPosition);
 
         this.updatePhysicsResponse();

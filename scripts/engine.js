@@ -241,6 +241,7 @@ function getProgram(name) {
     }
     throw new Error(`Program ${name} not found`);
 }
+const viewOffset = vec2.fromValues(0, 0);
 /** @param {number} alpha  */
 export function render(alpha) {
     resize();
@@ -248,11 +249,10 @@ export function render(alpha) {
     const program = "demo";
     useProgram(getProgram(program));
     mat4.identity(m)
-    mat4.ortho(m, 0, getScreenWidth(), 0, getScreenHeight(), 1, -1);
+    mat4.ortho(m, -getScreenWidth() / 2, getScreenWidth() / 2, -getScreenHeight() / 2, getScreenHeight() / 2, 1, -1);
     uniformMatrix4fv(getUniformLocationCached(program, "u_projection"), false, m);
     mat4.identity(m);
-    // const viewOffset = vec2.create();
-    const viewOffset = [character.position[0] * zoom - getScreenWidth() / 2, character.position[1] * zoom - getScreenHeight() / 2];
+    vec2.lerp(viewOffset, viewOffset, vec2.scale(vec2.create(), character.position,zoom), 0.1);
     mat4.lookAt(m, [...viewOffset, 1], [...viewOffset, -1], [0, 1, 0]);
     uniformMatrix4fv(getUniformLocationCached(program, "u_view"), false, m);
     mat4.identity(m)
@@ -287,6 +287,7 @@ export function render(alpha) {
     bindVAO(vaoMovingPlatform);
     for (let i = 0; i < mMovingPlatforms.length; ++i) {
         const character = mMovingPlatforms[i];
+        character.alpha = alpha;
         mat4.identity(m)
         mat4.translate(m, m, [character.position[0], character.position[1], 0]);
         mat4.scale(m, m, [character.scale[0], character.scale[1], 1]);
@@ -305,6 +306,7 @@ export function render(alpha) {
     const objects = [character].concat(mObjects);
     for (let i = 0; i < objects.length; ++i) {
         const character = objects[i];
+        character.alpha = alpha;
         mat4.identity(m)
         mat4.translate(m, m, [character.position[0], character.position[1], 0]);
         mat4.scale(m, m, [character.scale[0], character.scale[1], 1]);
