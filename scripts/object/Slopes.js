@@ -13,8 +13,6 @@ export const Slopes = {
     slopesHeights: [],
     /** @type {boolean[][]} */
     slopesExtended: [],
-    /** @type {SlopeOffsetSB[][][][][]} */
-    slopeOffsets: [],
     /**
      * @param {Uint8Array} slope
      * @returns {boolean[]}
@@ -32,28 +30,23 @@ export const Slopes = {
     init() {
         this.slopesHeights = [];
         this.slopesExtended = [];
-        this.slopeOffsets = [];
         for (let i = 0; i < TileCollisionType.Count; ++i) {
             switch (i) {
                 case TileCollisionType.Empty:
                     this.slopesHeights[i] = this.empty;
                     this.slopesExtended[i] = this.extend(this.slopesHeights[i]);
-                    this.slopeOffsets[i] = this.cacheSlopeOffsets(this.slopesExtended[i]);
                     break;
                 case TileCollisionType.Full:
                     this.slopesHeights[i] = this.full;
                     this.slopesExtended[i] = this.extend(this.slopesHeights[i]);
-                    this.slopeOffsets[i] = this.cacheSlopeOffsets(this.slopesExtended[i]);
                     break;
                 case TileCollisionType.OneWayFull:
                     this.slopesHeights[i] = this.slopesHeights[TileCollisionType.Full];
                     this.slopesExtended[i] = this.slopesExtended[TileCollisionType.Full];
-                    this.slopeOffsets[i] = this.slopeOffsets[TileCollisionType.Full];
                     break;
                 case TileCollisionType.Slope45:
                     this.slopesHeights[i] = this.slope45;
                     this.slopesExtended[i] = this.extend(this.slopesHeights[i]);
-                    this.slopeOffsets[i] = this.cacheSlopeOffsets(this.slopesExtended[i]);
                     break;
                 case TileCollisionType.Slope45FX:
                 case TileCollisionType.Slope45FY:
@@ -72,7 +65,6 @@ export const Slopes = {
                 case TileCollisionType.OneWaySlope45F90Y:
                     this.slopesHeights[i] = this.slopesHeights[TileCollisionType.Slope45];
                     this.slopesExtended[i] = this.slopesExtended[TileCollisionType.Slope45];
-                    this.slopeOffsets[i] = this.slopeOffsets[TileCollisionType.Slope45];
 
                     break;
             }
@@ -255,7 +247,7 @@ export const Slopes = {
                 sizeY = Math.floor(clamp(topY - (bottomTileEdge + posY), 0.0, cTileSize - 1));
             }
 
-            offset = SlopeOffsetI.from(this.slopeOffsets[tileCollisionType][posX][posY][sizeX][sizeY]);
+            offset = SlopeOffsetI.from(this.getOffset5p(this.slopesExtended[tileCollisionType], posX, posY, sizeX, sizeY));
 
             if (this.isFlippedY(tileCollisionType)) {
                 let tmp = offset.freeDown;
@@ -285,7 +277,7 @@ export const Slopes = {
                 sizeY = Math.floor(clamp(rightX - (leftTileEdge + posY), 0.0, cTileSize - 1));
             }
 
-            offset = SlopeOffsetI.from(this.slopeOffsets[tileCollisionType][posX][posY][sizeX][sizeY]);
+            offset = SlopeOffsetI.from(this.getOffset5p(this.slopesExtended[tileCollisionType], posX, posY, sizeX, sizeY));
 
             if (this.isFlippedY(tileCollisionType)) {
                 offset.collidingBottom = offset.collidingLeft;
@@ -331,8 +323,6 @@ export const Slopes = {
                     offsetCache[x][y][w] = [];
                     for (let h = 0; h < len; ++h) {
                         offsetCache[x][y][w][h] = this.getOffset5p(slopeExtended, x, y, w, h);
-                        // offsetCache[x][y][w][h] = new SlopeOffsetSB(0, 0, 0, 0, 0, 0, 0, 0);
-
                     }
                 }
             }
@@ -367,10 +357,10 @@ export const Slopes = {
             x = cTileSize - 1 - x;
 
         if (!this.isFlipped90(type)) {
-            const offset = SlopeOffsetI.from(this.slopeOffsets[type][x][0][0][cTileSize - 1]);
+            const offset = SlopeOffsetI.from(this.getOffset5p(this.slopesExtended[type], x, 0, 1, cTileSize));
             return this.isFlippedY(type) ? -offset.collidingTop : offset.collidingBottom;
         } else {
-            const offset = SlopeOffsetI.from(this.slopeOffsets[type][0][x][cTileSize - 1][0]);
+            const offset = SlopeOffsetI.from(this.getOffset5p(this.slopesExtended[type], 0, x, cTileSize, 1));
             return this.isFlippedY(type) ? offset.collidingLeft : -offset.collidingRight;
         }
     },

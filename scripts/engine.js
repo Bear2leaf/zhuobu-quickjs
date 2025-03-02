@@ -1,4 +1,4 @@
-import { activeTexture, bindEBO, bindTexture, bindVAO, bindVBO, bufferData, bufferDataElement, clear, clearColor, createBuffer, createShaderProgram, createTexture, createVAO, drawElements, enableVertexAttribute, getKey, getScreenHeight, getScreenWidth, getTime, getUniformLocation, initContext, loadImage, loadText, mat4, pollEvents, resize, setVertexAttributePointer, shouldCloseWindow, swapBuffers, terminate, uniform1f, uniform1i, uniformMatrix4fv, updateTexture, useProgram } from "./libs.js";
+import { activeTexture, bindEBO, bindTexture, bindVAO, bindVBO, bufferData, bufferDataElement, clear, clearColor, createBuffer, createShaderProgram, createTexture, createVAO, drawElements, enableVertexAttribute, getKey, getScreenHeight, getScreenWidth, getTime, getUniformLocation, initContext, loadImage, loadText, mat4, pollEvents, resize, setVertexAttributePointer, shouldCloseWindow, swapBuffers, terminate, uniform1f, uniform1i, uniformMatrix4fv, updateTexture, useProgram, vec2 } from "./libs.js";
 import { cHalfSizeX, cHalfSizeY, cTileSize } from "./misc/constants.js";
 import { KeyCode, KeyCodeGLFW, KeyInput, ObjectType, TileType } from "./misc/enums.js";
 import { Character } from "./object/Character.js";
@@ -30,7 +30,7 @@ let image2;
 let tex1;
 /** @type {WebGLTexture} */
 let tex2;
-/** @type {Character} */
+/** @type {MovingObject} */
 let character;
 /** @type {ImageContainer} */
 let imageTile1;
@@ -77,7 +77,7 @@ const positionMovingPlatform = new Float32Array([
     -32, +8, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0
 ]);
 const m = mat4.create();
-const zoom = 1;
+const zoom = 5;
 /** @type {Array<MovingObject>} */
 const mObjects = new Array();
 /** @type {Array<MovingObject>} */
@@ -92,7 +92,6 @@ export function init() {
         character.mType = ObjectType.Player;
         character.mPosition[0] = 100;
         character.mPosition[1] = 200;
-        mObjects.push(character);
     }
     {
         const o = new Character(map);
@@ -198,7 +197,7 @@ export function init() {
 
 }
 export function fixedUpdate() {
-    const objs = mMovingPlatforms.concat(mObjects);
+    const objs = mMovingPlatforms.concat([character]).concat(mObjects);
     for (const obj of objs) {
         switch (obj.mType) {
             case ObjectType.Player:
@@ -252,7 +251,8 @@ export function render(alpha) {
     mat4.ortho(m, 0, getScreenWidth(), 0, getScreenHeight(), 1, -1);
     uniformMatrix4fv(getUniformLocationCached(program, "u_projection"), false, m);
     mat4.identity(m);
-    const viewOffset = [0, 0];
+    // const viewOffset = vec2.create();
+    const viewOffset = [character.position[0] * zoom - getScreenWidth() / 2, character.position[1] * zoom - getScreenHeight() / 2];
     mat4.lookAt(m, [...viewOffset, 1], [...viewOffset, -1], [0, 1, 0]);
     uniformMatrix4fv(getUniformLocationCached(program, "u_view"), false, m);
     mat4.identity(m)
@@ -287,7 +287,6 @@ export function render(alpha) {
     bindVAO(vaoMovingPlatform);
     for (let i = 0; i < mMovingPlatforms.length; ++i) {
         const character = mMovingPlatforms[i];
-        character.alpha = alpha;
         mat4.identity(m)
         mat4.translate(m, m, [character.position[0], character.position[1], 0]);
         mat4.scale(m, m, [character.scale[0], character.scale[1], 1]);
@@ -303,9 +302,9 @@ export function render(alpha) {
     }
 
     bindVAO(vao);
-    for (let i = 0; i < mObjects.length; ++i) {
-        const character = mObjects[i];
-        character.alpha = alpha;
+    const objects = [character].concat(mObjects);
+    for (let i = 0; i < objects.length; ++i) {
+        const character = objects[i];
         mat4.identity(m)
         mat4.translate(m, m, [character.position[0], character.position[1], 0]);
         mat4.scale(m, m, [character.scale[0], character.scale[1], 1]);

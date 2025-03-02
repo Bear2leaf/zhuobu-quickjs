@@ -10,7 +10,7 @@ import { Slopes } from "./Slopes.js";
 
 export class MovingObject {
     get position() {
-        return vec2.round(vec2.create(), this.mPositionRender);
+        return vec2.round(vec2.create(), this.mPosition);
     }
     get scale() {
         return vec2.fromValues(this.mScale[0], this.mScale[1]);
@@ -19,19 +19,11 @@ export class MovingObject {
         this.mScale = vec2.fromValues(value[0], value[1]);
         this.mAABB.scale = [Math.abs(this.mScale[0]), Math.abs(this.mScale[1])];
     }
-    /** @param {number} value  */
-    set alpha(value) {
-        vec2.lerp(this.mPositionRender, this.mPositionPrev, this.mPosition, value);
-        vec2.copy(this.mPositionPrev, this.mPosition);
-        this.mAlpha = value;
-    }
     /** @param {Map} map */
     constructor(map) {
 
         this.mOldPosition = vec2.create();
         this.mPosition = vec2.create();
-        this.mPositionPrev = vec2.create();
-        this.mPositionRender = vec2.create();
         this.mReminder = vec2.create();
         this.mPS = new PositionState();
         this.mOldSpeed = vec2.create();
@@ -40,7 +32,6 @@ export class MovingObject {
         this.mScale = vec2.fromValues(1, 1);
         this.mAABB = new AABB();
 
-        this.mAlpha = 1.0;
 
 
         this.deltaTime = 0;
