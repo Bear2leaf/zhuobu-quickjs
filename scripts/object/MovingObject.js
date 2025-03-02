@@ -19,11 +19,9 @@ export class MovingObject {
         this.mScale = vec2.fromValues(value[0], value[1]);
         this.mAABB.scale = [Math.abs(this.mScale[0]), Math.abs(this.mScale[1])];
     }
-    /** @param {number} value  */
-    set alpha(value) {
+    tickPosition() {
         vec2.copy(this.mPositionRenderPrev, this.mPositionRender);
-        vec2.set(this.mPositionRender, this.mPosition[0] + this.mReminder[0], this.mPosition[1] + this.mReminder[1]);
-        this.mAlpha = value;
+        vec2.set(this.mPositionRender, this.mPosition[0] + (this.mOffset[0] === 0 ? 0 : this.mRemainder[0]), this.mPosition[1] + (this.mOffset[1] === 0 ? 0 : this.mRemainder[1]));
     }
     /** @param {Map} map */
     constructor(map) {
@@ -32,7 +30,7 @@ export class MovingObject {
         this.mPositionRenderPrev = vec2.create();
         this.mOldPosition = vec2.create();
         this.mPosition = vec2.create();
-        this.mReminder = vec2.create();
+        this.mRemainder = vec2.create();
         this.mPS = new PositionState();
         this.mOldSpeed = vec2.create();
         this.mSpeed = vec2.create();
@@ -506,12 +504,12 @@ export class MovingObject {
      * topRight: vec2,
      * bottomLeft: vec2,
      * state: PositionState,
-     * reminder: vec2,
+     * remainder: vec2,
      * }} ref
      * @returns 
      */
     move(offset, speed, aabb, ref) {
-        vec2.add(ref.reminder, ref.reminder, offset);
+        vec2.add(ref.remainder, ref.remainder, offset);
 
         vec2.copy(ref.topRight, aabb.max());
         vec2.copy(ref.bottomLeft, aabb.min());
@@ -520,8 +518,8 @@ export class MovingObject {
         ref.foundObstacleY = false;
         const step = vec2.fromValues(sign(offset[0]), sign(offset[1]));
 
-        const move = vec2.fromValues(Math.round(ref.reminder[0]), Math.round(ref.reminder[1]));
-        vec2.sub(ref.reminder, ref.reminder, move);
+        const move = vec2.fromValues(Math.round(ref.remainder[0]), Math.round(ref.remainder[1]));
+        vec2.sub(ref.remainder, ref.remainder, move);
         if (move[0] == 0.0 && move[1] == 0.0)
             return;
         else if (move[0] != 0.0 && move[1] == 0.0) {
@@ -728,12 +726,13 @@ export class MovingObject {
             }
         }
 
-        vec2.add(this.mPosition, this.mPosition, vec2.add(vec2.create(), this.mOffset, this.mReminder));
+
+        vec2.add(this.mPosition, this.mPosition, vec2.round(vec2.create(), vec2.add(vec2.create(), this.mOffset, this.mRemainder)));
 
         vec2.copy(this.mAABB.center, this.mPosition);
     }
     updatePhysicsP2() {
-        vec2.sub(this.mPosition, this.mPosition, vec2.add(vec2.create(), this.mOffset, this.mReminder));
+        vec2.sub(this.mPosition, this.mPosition, vec2.round(vec2.create(), vec2.add(vec2.create(), this.mOffset, this.mRemainder)));
         vec2.copy(this.mAABB.center, this.mPosition);
 
         this.updatePhysicsResponse();
@@ -742,7 +741,7 @@ export class MovingObject {
             const ref = {
                 position: this.mPosition,
                 state: this.mPS,
-                reminder: this.mReminder,
+                remainder: this.mRemainder,
                 topRight: this.mAABB.max(),
                 bottomLeft: this.mAABB.min(),
                 foundObstacleX: false,

@@ -1,5 +1,5 @@
 import { activeTexture, bindEBO, bindTexture, bindVAO, bindVBO, bufferData, bufferDataElement, clear, clearColor, createBuffer, createShaderProgram, createTexture, createVAO, drawElements, enableVertexAttribute, getKey, getScreenHeight, getScreenWidth, getTime, getUniformLocation, initContext, loadImage, loadText, mat4, pollEvents, resize, setVertexAttributePointer, shouldCloseWindow, swapBuffers, terminate, uniform1f, uniform1i, uniformMatrix4fv, updateTexture, useProgram, vec2 } from "./libs.js";
-import { cHalfSizeX, cHalfSizeY, cTileSize } from "./misc/constants.js";
+import { cHalfSizeX, cHalfSizeY, cTileSize, FPS, zoom } from "./misc/constants.js";
 import { KeyCode, KeyCodeGLFW, KeyInput, ObjectType, TileType } from "./misc/enums.js";
 import { Character } from "./object/Character.js";
 import { Map as GameMap } from "./object/Map.js";
@@ -77,7 +77,6 @@ const positionMovingPlatform = new Float32Array([
     -32, +8, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0
 ]);
 const m = mat4.create();
-const zoom = 5;
 /** @type {Array<MovingObject>} */
 const mObjects = new Array();
 /** @type {Array<MovingObject>} */
@@ -214,6 +213,7 @@ export function fixedUpdate() {
     map.checkCollisions();
     for (const element of objs) {
         element.updatePhysicsP2();
+        element.tickPosition();
     }
 }
 /**
@@ -252,7 +252,7 @@ export function render(alpha) {
     mat4.ortho(m, -getScreenWidth() / 2, getScreenWidth() / 2, -getScreenHeight() / 2, getScreenHeight() / 2, 1, -1);
     uniformMatrix4fv(getUniformLocationCached(program, "u_projection"), false, m);
     mat4.identity(m);
-    vec2.lerp(viewOffset, viewOffset, vec2.scale(vec2.create(), character.position,zoom), 0.1);
+    vec2.lerp(viewOffset, viewOffset, vec2.scale(vec2.create(), [character.position[0], character.position[1] + 100], zoom), 0.05);
     mat4.lookAt(m, [...viewOffset, 1], [...viewOffset, -1], [0, 1, 0]);
     uniformMatrix4fv(getUniformLocationCached(program, "u_view"), false, m);
     mat4.identity(m)
@@ -287,7 +287,7 @@ export function render(alpha) {
     bindVAO(vaoMovingPlatform);
     for (let i = 0; i < mMovingPlatforms.length; ++i) {
         const character = mMovingPlatforms[i];
-        character.alpha = alpha;
+        character.mAlpha = alpha;
         mat4.identity(m)
         mat4.translate(m, m, [character.position[0], character.position[1], 0]);
         mat4.scale(m, m, [character.scale[0], character.scale[1], 1]);
@@ -306,7 +306,7 @@ export function render(alpha) {
     const objects = [character].concat(mObjects);
     for (let i = 0; i < objects.length; ++i) {
         const character = objects[i];
-        character.alpha = alpha;
+        character.mAlpha = alpha;
         mat4.identity(m)
         mat4.translate(m, m, [character.position[0], character.position[1], 0]);
         mat4.scale(m, m, [character.scale[0], character.scale[1], 1]);
@@ -365,19 +365,30 @@ export async function mainQuickjs() {
     init();
     let acc = 0;
     let lastTime = getTime();
+    let timer = lastTime;
+    let frames = 0;
+    let updates = 0;
     while (!shouldCloseWindow()) {
         const currentTime = getTime();
-        const delta = currentTime - lastTime;
+        const delta = (currentTime - lastTime) / (1 / FPS);
         acc += delta;
         lastTime = currentTime;
         update();
-        while (acc >= 1 / FPS) {
+        while (acc >= 1) {
             fixedUpdate();
-            acc -= 1 / FPS;
+            updates++;
+            acc--; 
         }
-        render(acc / (1 / FPS));
+        render(acc);
         swapBuffers();
         pollEvents();
+        frames++;
+        // - Reset after one second
+        if (getTime() - timer > 1.0) {
+            timer++;
+            console.log(`FPS: ${frames} Updates: ${updates}`);
+            updates = 0, frames = 0;
+        }
     }
     terminate();
 }
@@ -387,23 +398,34 @@ export async function main() {
     init();
     let acc = 0;
     let lastTime = getTime();
+    let timer = lastTime;
+    let frames = 0;
+    let updates = 0;
     function loop() {
         const currentTime = getTime();
-        const delta = currentTime - lastTime;
+        const delta = (currentTime - lastTime) / (1 / FPS);
         acc += delta;
         lastTime = currentTime;
         update();
-        while (acc >= 1 / FPS) {
+        while (acc >= 1) {
             fixedUpdate();
-            acc -= 1 / FPS;
+            updates++;
+            acc--;
         }
-        render(acc / (1 / FPS));
+        render(acc);
+        frames++;
+
+        // - Reset after one second
+        if (getTime() - timer > 1.0) {
+            timer++;
+            console.log(`FPS: ${frames} Updates: ${updates}`);
+            updates = 0, frames = 0;
+        }
         requestAnimationFrame(loop);
     }
     loop();
 
 }
-export const FPS = 60;
 export const programCache = new Map();
 export const cacheUniformLocation = new Map();
 

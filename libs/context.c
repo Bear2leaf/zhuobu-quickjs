@@ -14,8 +14,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 
 // settings
-unsigned int width = 400;
-unsigned int height = 400;
+unsigned int width = 1280;
+unsigned int height = 760;
 
 
 // process all input: query GLFW whether relevant keys are pressed/released this
