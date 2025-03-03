@@ -12,8 +12,6 @@ import { Slopes } from "./object/Slopes.js";
 /** @type {WebGLVertexArrayObject} */
 let vao;
 /** @type {WebGLVertexArrayObject} */
-let vaoTile;
-/** @type {WebGLVertexArrayObject} */
 let vaoMovingPlatform;
 
 
@@ -36,10 +34,6 @@ let character;
 let imageTile1;
 /** @type {ImageContainer} */
 let imageTile2;
-/** @type {WebGLTexture} */
-let texTile1;
-/** @type {WebGLTexture} */
-let texTile2;
 
 
 
@@ -48,6 +42,45 @@ const inputs = new Set();
 
 /** @type {EnumSet<typeof KeyInput>} */
 const prevInputs = new Set();
+
+export const programCache = new Map();
+export const cacheUniformLocation = new Map();
+/**
+ *
+ * @param {string} name
+ * @param {WebGLProgram} program
+ */
+
+export function addProgramCache(name, program) {
+
+    programCache.set(name, program);
+}
+/**
+ *
+ * @param {string} program
+ * @param {string} name
+ * @returns
+ */
+export function getUniformLocationCached(program, name) {
+
+    const key = `${program}-${name}`;
+    if (cacheUniformLocation.has(key)) {
+        return cacheUniformLocation.get(key);
+    }
+    const location = getUniformLocation(programCache.get(program), name);
+    cacheUniformLocation.set(key, location);
+}
+/**
+ * @param {string} name
+ * @returns {WebGLProgram}
+ */
+export function getProgram(name) {
+    if (programCache.has(name)) {
+        return programCache.get(name);
+    }
+    throw new Error(`Program ${name} not found`);
+}
+
 
 export async function load() {
     vertexShaderSource = await loadText("resources/glsl/demo.vert.sk");
@@ -58,24 +91,6 @@ export async function load() {
     imageTile2 = await loadImage("resources/image/small-platform.png");
 }
 
-const position = new Float32Array([
-    cHalfSizeX, cHalfSizeY, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0,
-    cHalfSizeX, -cHalfSizeY, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-    -cHalfSizeX, -cHalfSizeY, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-    -cHalfSizeX, cHalfSizeY, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0
-]);
-const positionTile = new Float32Array([
-    +cTileSize / 2, +cTileSize / 2, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0,
-    +cTileSize / 2, -cTileSize / 2, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-    -cTileSize / 2, -cTileSize / 2, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-    -cTileSize / 2, +cTileSize / 2, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0
-]);
-const positionMovingPlatform = new Float32Array([
-    +32, +8, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0,
-    +32, -8, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-    -32, -8, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-    -32, +8, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0
-]);
 const m = mat4.create();
 /** @type {Array<MovingObject>} */
 const mObjects = new Array();
@@ -85,9 +100,13 @@ const map = new GameMap();
 export function init() {
     initContext();
     Slopes.init();
+    const program = createShaderProgram(vertexShaderSource, fragmentShaderSource);
+    addProgramCache("demo", program);
+    useProgram(program);
     {
         character = new Character(map, inputs, prevInputs);
         character.init();
+        character.mSpriteRenderer.initTexture(image1, image2);
         character.mType = ObjectType.Player;
         character.mPosition[0] = 100;
         character.mPosition[1] = 200;
@@ -95,6 +114,7 @@ export function init() {
     {
         const o = new Character(map);
         o.init();
+        o.mSpriteRenderer.initTexture(image1, image2);
         o.mType = ObjectType.NPC;
         o.mPosition[0] = 300;
         o.mPosition[1] = 100;
@@ -103,6 +123,7 @@ export function init() {
     {
         const o = new Character(map);
         o.init();
+        o.mSpriteRenderer.initTexture(image1, image2);
         o.mType = ObjectType.NPC;
         o.mPosition[0] = 100;
         o.mPosition[1] = 200;
@@ -111,88 +132,18 @@ export function init() {
     {
         const o = new MovingPlatform(map);
         o.init();
+        o.mSpriteRenderer.initTexture(image1, image2);
         o.mType = ObjectType.MovingPlatform;
         o.mPosition[0] = 450;
         o.mPosition[1] = 200;
         mMovingPlatforms.push(o);
     }
+    map.spriteRenderer.initMap(map);
+    map.spriteRenderer.initTexture(imageTile1, image2);
+
     clearColor(0.5, 1, 0.5, 1.0);
-    const program = createShaderProgram(vertexShaderSource, fragmentShaderSource);
-    programCache.set("demo", program);
-    useProgram(program);
-    vao = createVAO();
-    const vbo = createBuffer();
-    const ebo = createBuffer();
-    bindVAO(vao);
-    bindVBO(vbo);
-    bufferData(position);
-    bindEBO(ebo);
-    bufferDataElement(new Uint32Array([
-        0, 1, 3,  // first Triangle
-        1, 2, 3   // second Triangle
-    ]));
-    setVertexAttributePointer(0, 3, false, 8, 0);
-    enableVertexAttribute(0);
-    setVertexAttributePointer(1, 3, false, 8, 3);
-    enableVertexAttribute(1);
-    setVertexAttributePointer(2, 2, false, 8, 6);
-    enableVertexAttribute(2);
-
-    tex1 = createTexture();
-    tex2 = createTexture();
-    activeTexture(0);
-    bindTexture(tex1);
-    updateTexture(image1);
-    activeTexture(1);
-    bindTexture(tex2);
-    updateTexture(image2);
 
 
-    vaoTile = createVAO();
-    const vboTile = createBuffer();
-    const eboTile = createBuffer();
-    bindVAO(vaoTile);
-    bindVBO(vboTile);
-    bufferData(positionTile);
-    bindEBO(eboTile);
-    bufferDataElement(new Uint32Array([
-        0, 1, 3,  // first Triangle
-        1, 2, 3   // second Triangle
-    ]));
-    setVertexAttributePointer(0, 3, false, 8, 0);
-    enableVertexAttribute(0);
-    setVertexAttributePointer(1, 3, false, 8, 3);
-    enableVertexAttribute(1);
-    setVertexAttributePointer(2, 2, false, 8, 6);
-    enableVertexAttribute(2);
-
-    texTile1 = createTexture();
-    texTile2 = createTexture();
-    activeTexture(0);
-    bindTexture(texTile1);
-    updateTexture(imageTile1);
-    activeTexture(1);
-    bindTexture(texTile2);
-    updateTexture(image2);
-
-
-    vaoMovingPlatform = createVAO();
-    const vboMovingPlatform = createBuffer();
-    const eboMovingPlatform = createBuffer();
-    bindVAO(vaoMovingPlatform);
-    bindVBO(vboMovingPlatform);
-    bufferData(positionMovingPlatform);
-    bindEBO(eboMovingPlatform);
-    bufferDataElement(new Uint32Array([
-        0, 1, 3,  // first Triangle
-        1, 2, 3   // second Triangle
-    ]));
-    setVertexAttributePointer(0, 3, false, 8, 0);
-    enableVertexAttribute(0);
-    setVertexAttributePointer(1, 3, false, 8, 3);
-    enableVertexAttribute(1);
-    setVertexAttributePointer(2, 2, false, 8, 6);
-    enableVertexAttribute(2);
 
 }
 export function fixedUpdate() {
@@ -216,31 +167,6 @@ export function fixedUpdate() {
         element.tickPosition();
     }
 }
-/**
- * 
- * @param {string} program 
- * @param {string} name 
- * @returns 
- */
-function getUniformLocationCached(program, name) {
-
-    const key = `${program}-${name}`;
-    if (cacheUniformLocation.has(key)) {
-        return cacheUniformLocation.get(key);
-    }
-    const location = getUniformLocation(programCache.get(program), name);
-    cacheUniformLocation.set(key, location);
-}
-/**
- * @param {string} name
- * @returns {WebGLProgram}
- */
-function getProgram(name) {
-    if (programCache.has(name)) {
-        return programCache.get(name);
-    }
-    throw new Error(`Program ${name} not found`);
-}
 const viewOffset = vec2.fromValues(0, 0);
 /** @param {number} alpha  */
 export function render(alpha) {
@@ -259,66 +185,29 @@ export function render(alpha) {
     mat4.scale(m, m, [zoom, zoom, 1]);
     uniformMatrix4fv(getUniformLocationCached(program, "u_world"), false, m);
 
-    bindVAO(vaoTile);
-    uniform1f(getUniformLocationCached(program, "u_time"), 0);
-    activeTexture(0);
-    bindTexture(texTile1);
-    uniform1i(getUniformLocationCached(program, "u_texture1"), 0);
-    activeTexture(1);
-    bindTexture(texTile2);
-    uniform1i(getUniformLocationCached(program, "u_texture2"), 1);
-    for (let i = 0; i < character.mMap.mWidth; i++) {
-        for (let j = 0; j < character.mMap.mHeight; j++) {
-            if (!character.mMap.mTIlesSprites[j * character.mMap.mWidth + i].unit) continue;
-            mat4.identity(m)
-            mat4.translate(m, m, [...character.mMap.getMapTilePosition(i, j), 0]);
-            uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, m);
-            activeTexture(0);
-            bindTexture(character.mMap.mTIlesSprites[j * character.mMap.mWidth + i].unit === TileType.Block ? texTile1 : texTile2);
-            uniform1i(getUniformLocationCached(program, "u_texture1"), 0);
-            activeTexture(1);
-            bindTexture(texTile2);
-            uniform1i(getUniformLocationCached(program, "u_texture2"), 1);
-            drawElements(6);
-        }
-    }
+    const model = mat4.identity(mat4.create());
+    uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, model);
+    map.spriteRenderer.render();
 
-
-    bindVAO(vaoMovingPlatform);
     for (let i = 0; i < mMovingPlatforms.length; ++i) {
-        const character = mMovingPlatforms[i];
-        character.mAlpha = alpha;
-        mat4.identity(m)
-        mat4.translate(m, m, [character.position[0], character.position[1], 0]);
-        mat4.scale(m, m, [character.scale[0], character.scale[1], 1]);
-        uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, m);
-        uniform1f(getUniformLocationCached(program, "u_time"), 0);
-        activeTexture(0);
-        bindTexture(tex1);
-        uniform1i(getUniformLocationCached(program, "u_texture1"), 0);
-        activeTexture(1);
-        bindTexture(tex2);
-        uniform1i(getUniformLocationCached(program, "u_texture2"), 1);
-        drawElements(6);
+        const obj = mMovingPlatforms[i];
+        obj.mAlpha = alpha;
+        const model = mat4.identity(mat4.create());
+        mat4.translate(model, model, [obj.position[0], obj.position[1], 0]);
+        mat4.scale(model, model, [obj.scale[0], obj.scale[1], 1]);
+        uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, model);
+        obj.mSpriteRenderer.render();
     }
 
-    bindVAO(vao);
     const objects = [character].concat(mObjects);
     for (let i = 0; i < objects.length; ++i) {
-        const character = objects[i];
-        character.mAlpha = alpha;
-        mat4.identity(m)
-        mat4.translate(m, m, [character.position[0], character.position[1], 0]);
-        mat4.scale(m, m, [character.scale[0], character.scale[1], 1]);
-        uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, m);
-        uniform1f(getUniformLocationCached(program, "u_time"), 0);
-        activeTexture(0);
-        bindTexture(tex1);
-        uniform1i(getUniformLocationCached(program, "u_texture1"), 0);
-        activeTexture(1);
-        bindTexture(tex2);
-        uniform1i(getUniformLocationCached(program, "u_texture2"), 1);
-        drawElements(6);
+        const obj = objects[i];
+        obj.mAlpha = alpha;
+        const model = mat4.identity(mat4.create());
+        mat4.translate(model, model, [obj.position[0], obj.position[1], 0]);
+        mat4.scale(model, model, [obj.scale[0], obj.scale[1], 1]);
+        uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, model);
+        obj.mSpriteRenderer.render();
     }
 }
 
@@ -426,6 +315,3 @@ export async function main() {
     loop();
 
 }
-export const programCache = new Map();
-export const cacheUniformLocation = new Map();
-

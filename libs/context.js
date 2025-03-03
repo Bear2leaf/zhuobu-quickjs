@@ -1,6 +1,5 @@
 "use strict";
 
-import { cacheUniformLocation, programCache } from "../scripts/engine.js";
 
 /**
  * The context object.

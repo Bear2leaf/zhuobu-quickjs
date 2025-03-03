@@ -239,7 +239,7 @@ export class Character extends MovingObject {
         this.mJumpSpeed = cJumpSpeed;
         this.mWalkSpeed = cWalkSpeed;
         this.mSlopeWallHeight = cSlopeWallHeight;
-
+        this.mSpriteRenderer.initCharacter();
     }
 
     updatePrevInputs() {

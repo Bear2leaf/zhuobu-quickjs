@@ -22,9 +22,6 @@ const mapData = Object.freeze(new Array(mw * mh).fill(TileType.Empty).map((tile,
     }
     return TileType.Empty;
 }));
-const spritesData = Object.freeze(mapData.map((tile) => {
-    return new SpriteRenderer(tile);
-}));
 const collisionsData = Object.freeze(mapData.map((tile) => {
     if (tile === TileType.Block) {
         return TileCollisionType.Full;
@@ -37,9 +34,7 @@ export class Map {
     constructor() {
         /** @type {Readonly<EnumValue<typeof TileType>[]>} */
         this.mTiles = mapData;
-        /** @type {Readonly<(SpriteRenderer)[]>} */
-        this.mTIlesSprites = spritesData;
-
+        this.spriteRenderer = new SpriteRenderer();
         this.mPosition = vec3.create();
         this.mWidth = mw;
         this.mHeight = mh;
@@ -289,3 +284,5 @@ export class Map {
         return this.mTilesCollision[y * this.mWidth + x];
     }
 }
+
+

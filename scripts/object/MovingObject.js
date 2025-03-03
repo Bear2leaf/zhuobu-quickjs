@@ -1,3 +1,4 @@
+import { SpriteRenderer } from "../component/SpriteRenderer.js";
 import { getScreenHeight, vec2, vec3 } from "../libs.js";
 import { cTileSize } from "../misc/constants.js";
 import { ObjectType, TileCollisionType } from "../misc/enums.js";
@@ -38,7 +39,7 @@ export class MovingObject {
         this.mScale = vec2.fromValues(1, 1);
         this.mAABB = new AABB();
 
-
+        this.mSpriteRenderer = new SpriteRenderer();;
 
         this.deltaTime = 0;
         this.mMap = map;

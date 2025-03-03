@@ -21,6 +21,7 @@ export class MovingPlatform extends MovingObject {
         this.mMovingSpeed = 100.0;
         this.mIsKinematic = true;
         this.mSpeed[0] = this.mMovingSpeed;
+        this.mSpriteRenderer.initMovingPlatform();
     }
     customUpdate() {
         if (this.mPS.pushesRightTile && !this.mPS.pushesBottomTile)
