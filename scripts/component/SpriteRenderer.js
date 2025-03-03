@@ -18,13 +18,25 @@ export class SpriteRenderer {
      * 
      * @param {ImageContainer[]} imgs 
      */
-    initTexture(...imgs) {
+    initImageTexture(...imgs) {
         for (let index = 0; index < imgs.length; index++) {
             const img = imgs[index];
             const tex = createTexture();
             activeTexture(index);
             bindTexture(tex);
             updateTexture(img);
+            this.textures.push(tex);
+        }
+    }
+    /**
+     * 
+     * @param {WebGLTexture[]} texs 
+     */
+    initTexture(...texs) {
+        for (let index = 0; index < texs.length; index++) {
+            const tex = texs[index];
+            activeTexture(index);
+            bindTexture(tex);
             this.textures.push(tex);
         }
     }
@@ -54,6 +66,39 @@ export class SpriteRenderer {
         setVertexAttributePointer(2, 2, false, 8, 6);
         enableVertexAttribute(2);
 
+    }
+    /**
+     * 
+     * @param {number} x 
+     * @param {number} y 
+     * @param {number} width 
+     * @param {number} height 
+     */
+    initQuad(x, y, width, height) {
+        this.vao = createVAO();
+        this.vbo = createBuffer();
+        this.ebo = createBuffer();
+        const { vao, vbo, ebo, program, textures } = this;
+        bindVAO(vao);
+        bindVBO(vbo);
+        bufferData(new Float32Array([
+            +width / 2 + x, +height / 2 + y, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0,
+            +width / 2 + x, -height / 2 + y, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
+            -width / 2 + x, -height / 2 + y, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+            -width / 2 + x, +height / 2 + y, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0
+        ]));
+        bindEBO(ebo);
+        bufferDataElement(new Uint32Array([
+            0, 1, 3,  // first Triangle
+            1, 2, 3   // second Triangle
+        ]));
+        this.count = 6;
+        setVertexAttributePointer(0, 3, false, 8, 0);
+        enableVertexAttribute(0);
+        setVertexAttributePointer(1, 3, false, 8, 3);
+        enableVertexAttribute(1);
+        setVertexAttributePointer(2, 2, false, 8, 6);
+        enableVertexAttribute(2);
     }
     initCharacter() {
         this.vao = createVAO();

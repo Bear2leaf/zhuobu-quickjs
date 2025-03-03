@@ -574,6 +574,62 @@ static JSValue js_getKey(JSContext* ctx,
     return JS_NewBool(ctx, glfwGetKey(window, key) == GLFW_PRESS);
 }
 
+
+static JSValue js_createFramebuffer(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    int width;
+    int height;
+    JS_ToInt32(ctx, &width, argv[0]);
+    JS_ToInt32(ctx, &height, argv[1]);
+    unsigned int fbo;
+    glGenFramebuffers(1, &fbo);
+    unsigned int texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    JSValue ret = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, ret, "fbo", JS_NewInt32(ctx, fbo));
+    JS_SetPropertyStr(ctx, ret, "texture", JS_NewInt32(ctx, texture));
+    JS_SetPropertyStr(ctx, ret, "width", JS_NewInt32(ctx, width));
+    JS_SetPropertyStr(ctx, ret, "height", JS_NewInt32(ctx, height));
+    return ret;
+}
+
+
+
+static JSValue js_beginFramebuffer(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    int fbo;
+    JS_ToInt32(ctx, &fbo, JS_GetPropertyStr(ctx, argv[0], "fbo"));
+    int width;
+    int height;
+    JS_ToInt32(ctx, &width, JS_GetPropertyStr(ctx, argv[0], "width"));
+    JS_ToInt32(ctx, &height, JS_GetPropertyStr(ctx, argv[0], "height"));
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glViewport(0, 0, width, height);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_endFramebuffer(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, width, height);
+    return JS_UNDEFINED;
+}
+
 static const JSCFunctionListEntry js_context_funcs[] = {
     JS_CFUNC_DEF("loadText", 1, js_loadText),
     JS_CFUNC_DEF("createShaderProgram", 2, js_createShaderProgram),
@@ -608,10 +664,13 @@ static const JSCFunctionListEntry js_context_funcs[] = {
     JS_CFUNC_DEF("loadImage", 1, js_loadImage),
     JS_CFUNC_DEF("createTexture", 0, js_createTexture),
     JS_CFUNC_DEF("bindTexture", 1, js_bindTexture),
-    JS_CFUNC_DEF("updateTexture", 1, js_updateTexture),
+    JS_CFUNC_DEF("updateTexture", 2, js_updateTexture),
     JS_CFUNC_DEF("activeTexture", 1, js_activeTexture),
     JS_CFUNC_DEF("resize", 0, js_resize),
     JS_CFUNC_DEF("getKey", 1, js_getKey),
+    JS_CFUNC_DEF("createFramebuffer", 2, js_createFramebuffer),
+    JS_CFUNC_DEF("beginFramebuffer", 1, js_beginFramebuffer),
+    JS_CFUNC_DEF("endFramebuffer", 1, js_endFramebuffer),
 };
 
 

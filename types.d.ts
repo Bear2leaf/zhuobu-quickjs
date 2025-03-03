@@ -1,3 +1,30 @@
+type Rectangle = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotated?: boolean;
+}
+type AtlasNode = {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+} & ({
+    used: true;
+    child: [Node, Node];
+} | {
+    used: false;
+    child: null;
+});
+type Framebuffer = {
+  texture: WebGLTexture
+  fbo: WebGLFramebuffer
+  width: number
+  height: number
+}
+
+
 interface IndexedCollection extends Iterable<number> {
   readonly length: number;
   [index: number]: number;

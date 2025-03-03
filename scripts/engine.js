@@ -1,18 +1,14 @@
+import { SpriteRenderer } from "./component/SpriteRenderer.js";
 import { activeTexture, bindEBO, bindTexture, bindVAO, bindVBO, bufferData, bufferDataElement, clear, clearColor, createBuffer, createShaderProgram, createTexture, createVAO, drawElements, enableVertexAttribute, getKey, getScreenHeight, getScreenWidth, getTime, getUniformLocation, initContext, loadImage, loadText, mat4, pollEvents, resize, setVertexAttributePointer, shouldCloseWindow, swapBuffers, terminate, uniform1f, uniform1i, uniformMatrix4fv, updateTexture, useProgram, vec2 } from "./libs.js";
 import { cHalfSizeX, cHalfSizeY, cTileSize, FPS, zoom } from "./misc/constants.js";
 import { KeyCode, KeyCodeGLFW, KeyInput, ObjectType, TileType } from "./misc/enums.js";
+import { buildAtlas, addAtlas as loadAtlasImages, loadAtlasShaderSource } from "./object/atlas.js";
 import { Character } from "./object/Character.js";
 import { Map as GameMap } from "./object/Map.js";
 import { MovingObject } from "./object/MovingObject.js";
 import { MovingPlatform } from "./object/MovingPlatform.js";
 import { Slopes } from "./object/Slopes.js";
 
-
-
-/** @type {WebGLVertexArrayObject} */
-let vao;
-/** @type {WebGLVertexArrayObject} */
-let vaoMovingPlatform;
 
 
 /** @type {string}*/
@@ -24,10 +20,6 @@ let fragmentShaderSource;
 let image1;
 /** @type {ImageContainer} */
 let image2;
-/** @type {WebGLTexture} */
-let tex1;
-/** @type {WebGLTexture} */
-let tex2;
 /** @type {MovingObject} */
 let character;
 /** @type {ImageContainer} */
@@ -89,6 +81,8 @@ export async function load() {
     image2 = await loadImage("resources/image/awesomeface.png");
     imageTile1 = await loadImage("resources/image/block.png");
     imageTile2 = await loadImage("resources/image/small-platform.png");
+    await loadAtlasShaderSource();
+    await loadAtlasImages();
 }
 
 const m = mat4.create();
@@ -97,8 +91,13 @@ const mObjects = new Array();
 /** @type {Array<MovingObject>} */
 const mMovingPlatforms = new Array();
 const map = new GameMap();
+
+const atlasRenderer = new SpriteRenderer();
 export function init() {
     initContext();
+    const atlas = buildAtlas();
+    atlasRenderer.initTexture(atlas.texture, atlas.texture);
+    atlasRenderer.initQuad(0, 0, 128, 128)
     Slopes.init();
     const program = createShaderProgram(vertexShaderSource, fragmentShaderSource);
     addProgramCache("demo", program);
@@ -106,7 +105,7 @@ export function init() {
     {
         character = new Character(map, inputs, prevInputs);
         character.init();
-        character.mSpriteRenderer.initTexture(image1, image2);
+        character.mSpriteRenderer.initImageTexture(image1, image2);
         character.mType = ObjectType.Player;
         character.mPosition[0] = 100;
         character.mPosition[1] = 200;
@@ -114,7 +113,7 @@ export function init() {
     {
         const o = new Character(map);
         o.init();
-        o.mSpriteRenderer.initTexture(image1, image2);
+        o.mSpriteRenderer.initImageTexture(image1, image2);
         o.mType = ObjectType.NPC;
         o.mPosition[0] = 300;
         o.mPosition[1] = 100;
@@ -123,7 +122,7 @@ export function init() {
     {
         const o = new Character(map);
         o.init();
-        o.mSpriteRenderer.initTexture(image1, image2);
+        o.mSpriteRenderer.initImageTexture(image1, image2);
         o.mType = ObjectType.NPC;
         o.mPosition[0] = 100;
         o.mPosition[1] = 200;
@@ -132,14 +131,14 @@ export function init() {
     {
         const o = new MovingPlatform(map);
         o.init();
-        o.mSpriteRenderer.initTexture(image1, image2);
+        o.mSpriteRenderer.initImageTexture(image1, image2);
         o.mType = ObjectType.MovingPlatform;
         o.mPosition[0] = 450;
         o.mPosition[1] = 200;
         mMovingPlatforms.push(o);
     }
     map.spriteRenderer.initMap(map);
-    map.spriteRenderer.initTexture(imageTile1, image2);
+    map.spriteRenderer.initImageTexture(imageTile1, image2);
 
     clearColor(0.5, 1, 0.5, 1.0);
 
@@ -209,6 +208,11 @@ export function render(alpha) {
         uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, model);
         obj.mSpriteRenderer.render();
     }
+    {
+        const model = mat4.identity(mat4.create());
+        uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, model);
+        atlasRenderer.render();
+    }
 }
 
 /**
@@ -266,7 +270,7 @@ export async function mainQuickjs() {
         while (acc >= 1) {
             fixedUpdate();
             updates++;
-            acc--; 
+            acc--;
         }
         render(acc);
         swapBuffers();

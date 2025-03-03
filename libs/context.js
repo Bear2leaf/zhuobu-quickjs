@@ -450,3 +450,46 @@ export function activeTexture(unit) {
     const gl = context.gl;
     gl.activeTexture(gl.TEXTURE0 + unit);
 }
+
+
+/**
+ * 
+ * @param {number} width 
+ * @param {number} height 
+ * @returns {Framebuffer}
+ */
+export function createFramebuffer(width, height) {
+    const { gl } = context;
+    const fbo = gl.createFramebuffer();
+    if (!fbo) throw new Error("createFramebuffer failed");
+    const texture = gl.createTexture();
+    if (!texture) throw new Error("createTexture failed");
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return { fbo, texture, width, height };
+}
+/**
+ * 
+ * @param {Framebuffer} framebuffer 
+ */
+export function beginFramebuffer(framebuffer) {
+    const { gl } = context;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer.fbo);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+    gl.viewport(0, 0, framebuffer.width, framebuffer.height);
+    gl.scissor(0, 0, framebuffer.width, framebuffer.height);
+}
+export function endFramebuffer() {
+    const { gl } = context;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0);
+    gl.viewport(0, 0, getScreenWidth(), getScreenHeight());
+    gl.scissor(0, 0, getScreenWidth(), getScreenHeight());
+}
