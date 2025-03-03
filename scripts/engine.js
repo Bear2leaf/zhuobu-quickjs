@@ -24,8 +24,6 @@ let image2;
 let character;
 /** @type {ImageContainer} */
 let imageTile1;
-/** @type {ImageContainer} */
-let imageTile2;
 
 
 
@@ -75,12 +73,10 @@ export function getProgram(name) {
 
 
 export async function load() {
-    vertexShaderSource = await loadText("resources/glsl/demo.vert.sk");
-    fragmentShaderSource = await loadText("resources/glsl/demo.frag.sk");
+    vertexShaderSource = await loadText("resources/glsl/sprite.vert.sk");
+    fragmentShaderSource = await loadText("resources/glsl/sprite.frag.sk");
     image1 = await loadImage("resources/image/container.jpg");
     image2 = await loadImage("resources/image/awesomeface.png");
-    imageTile1 = await loadImage("resources/image/block.png");
-    imageTile2 = await loadImage("resources/image/small-platform.png");
     await loadAtlasShaderSource();
     await loadAtlasImages();
 }
@@ -96,24 +92,24 @@ const atlasRenderer = new SpriteRenderer();
 export function init() {
     initContext();
     const atlas = buildAtlas();
-    atlasRenderer.initTexture(atlas.texture, atlas.texture);
+    atlasRenderer.setAtlas(atlas);
     atlasRenderer.initQuad(0, 0, 128, 128)
     Slopes.init();
     const program = createShaderProgram(vertexShaderSource, fragmentShaderSource);
-    addProgramCache("demo", program);
+    addProgramCache("sprite", program);
     useProgram(program);
     {
         character = new Character(map, inputs, prevInputs);
+        character.mSpriteRenderer.setAtlas(atlas);
         character.init();
-        character.mSpriteRenderer.initImageTexture(image1, image2);
         character.mType = ObjectType.Player;
         character.mPosition[0] = 100;
         character.mPosition[1] = 200;
     }
     {
         const o = new Character(map);
+        o.mSpriteRenderer.setAtlas(atlas);
         o.init();
-        o.mSpriteRenderer.initImageTexture(image1, image2);
         o.mType = ObjectType.NPC;
         o.mPosition[0] = 300;
         o.mPosition[1] = 100;
@@ -121,8 +117,8 @@ export function init() {
     }
     {
         const o = new Character(map);
+        o.mSpriteRenderer.setAtlas(atlas);
         o.init();
-        o.mSpriteRenderer.initImageTexture(image1, image2);
         o.mType = ObjectType.NPC;
         o.mPosition[0] = 100;
         o.mPosition[1] = 200;
@@ -130,15 +126,15 @@ export function init() {
     }
     {
         const o = new MovingPlatform(map);
+        o.mSpriteRenderer.setAtlas(atlas);
         o.init();
-        o.mSpriteRenderer.initImageTexture(image1, image2);
         o.mType = ObjectType.MovingPlatform;
         o.mPosition[0] = 450;
         o.mPosition[1] = 200;
         mMovingPlatforms.push(o);
     }
+    map.spriteRenderer.setAtlas(atlas);
     map.spriteRenderer.initMap(map);
-    map.spriteRenderer.initImageTexture(imageTile1, image2);
 
     clearColor(0.5, 1, 0.5, 1.0);
 
@@ -171,7 +167,7 @@ const viewOffset = vec2.fromValues(0, 0);
 export function render(alpha) {
     resize();
     clear();
-    const program = "demo";
+    const program = "sprite";
     useProgram(getProgram(program));
     mat4.identity(m)
     mat4.ortho(m, -getScreenWidth() / 2, getScreenWidth() / 2, -getScreenHeight() / 2, getScreenHeight() / 2, 1, -1);

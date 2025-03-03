@@ -69,15 +69,11 @@ export async function loadAtlasShaderSource() {
 export async function addAtlas() {
 
     const urls = new Set([
-        "atlas/cubes/bigGreen",
-        "atlas/cubes/bigGrey",
-        "atlas/spheres/smallCyan",
-        "atlas/spheres/smallGreen",
-        "atlas/spheres/smallGrey",
-        "atlas/spheres/smallRed",
         "atlas/tall/long",
-        "atlas/tiles/1",
-        "atlas/tiles/7",
+        "atlas/platform/small-platform",
+        "atlas/platform/platform-long",
+        "atlas/platform/block",
+        "atlas/platform/door",
     ]);
     for (const name of urls) {
         imageCache.set(name, { ...await loadImage(`resources/${name}.png`), name });
@@ -86,12 +82,6 @@ export async function addAtlas() {
 }
 
 
-function createDrawobject() {
-    const vao = createVAO();
-    const ebo = createBuffer();
-    const vbo = createBuffer();
-    return { vao, vbo, ebo, program: createShaderProgram(vert, frag) };
-}
 /**
  * @param {WebGLBuffer} vbo 
  * @param {ImageContainer} data 
@@ -131,7 +121,6 @@ function draw(vbo, data, x, y, angle) {
     positions[10] = p3[1];
 
 
-    console.log(...positions);
 
 
     texcoords[0] = 0 / data.width;
@@ -155,9 +144,10 @@ function draw(vbo, data, x, y, angle) {
 
 }
 export function buildAtlas() {
-    /** @type {Record<string, Rectangle>} */
-    const atlasData = {};
-    const { program, vao, vbo, ebo } = createDrawobject();
+    const vao = createVAO();
+    const ebo = createBuffer();
+    const vbo = createBuffer();
+    const program = createShaderProgram(vert, frag);
     const dest = { x: 0, y: 0, width: 0, height: 0 };
     const padding = 1;
     const atlasSize = 128;
@@ -206,8 +196,10 @@ export function buildAtlas() {
         }
         return img
     });
-    images.sort((a, b) => b.height - a.height);
+    images.sort((a, b) => b.width - a.width);
     const texture = createTexture();
+    /** @type {AtlasContainer["atlasData"]} */
+    const atlasData = {};
     bindTexture(texture);
     for (const image of images) {
         let rotated = false;
@@ -252,5 +244,5 @@ export function buildAtlas() {
 
     }
     endFramebuffer();
-    return { texture: framebuffer.texture, atlasData };
+    return { texture: framebuffer.texture, atlasData, atlasSize };
 }

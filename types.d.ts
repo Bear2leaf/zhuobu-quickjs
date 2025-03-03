@@ -5,6 +5,11 @@ type Rectangle = {
   height: number;
   rotated?: boolean;
 }
+type AtlasContainer = {
+  texture: WebGLTexture,
+  atlasData: Record<string, Rectangle>,
+  atlasSize: number
+}
 type AtlasNode = {
     x: number;
     y: number;

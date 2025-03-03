@@ -1,5 +1,5 @@
 import { getProgram, getUniformLocationCached } from "../engine.js";
-import { createVAO, createBuffer, bindVAO, bindVBO, bufferData, bindEBO, bufferDataElement, setVertexAttributePointer, enableVertexAttribute, activeTexture, bindTexture, drawElements, mat4, uniform1f, uniform1i, uniformMatrix4fv, useProgram, createTexture, updateTexture } from "../libs.js";
+import { createVAO, createBuffer, bindVAO, bindVBO, bufferData, bindEBO, bufferDataElement, setVertexAttributePointer, enableVertexAttribute, activeTexture, bindTexture, drawElements, mat4, uniform1f, uniform1i, uniformMatrix4fv, useProgram, createTexture, updateTexture, vec2, vec3 } from "../libs.js";
 import { cHalfSizeX, cHalfSizeY, cTileSize } from "../misc/constants.js";
 import { TileType } from "../misc/enums.js";
 import { Character } from "../object/Character.js";
@@ -12,7 +12,7 @@ export class SpriteRenderer {
     constructor() {
         /** @type {WebGLTexture[]} */
         this.textures = [];
-        this.program = "demo"
+        this.program = "sprite"
     }
     /**
      * 
@@ -30,28 +30,41 @@ export class SpriteRenderer {
     }
     /**
      * 
-     * @param {WebGLTexture[]} texs 
+     * @param {AtlasContainer} atlas 
      */
-    initTexture(...texs) {
-        for (let index = 0; index < texs.length; index++) {
-            const tex = texs[index];
-            activeTexture(index);
-            bindTexture(tex);
-            this.textures.push(tex);
-        }
+    setAtlas(atlas) {
+        this.atlas = atlas;
     }
     initMovingPlatform() {
         this.vao = createVAO();
         this.vbo = createBuffer();
         this.ebo = createBuffer();
-        const { vao, vbo, ebo, program, textures } = this;
+        const { vao, vbo, ebo, program, atlas } = this;
+        if (!atlas) {
+            throw new Error("Atlas not initialized");
+        }
+        this.textures = [atlas.texture];
+        bindVAO(vao);
+        bindVBO(vbo);
+        const rect = atlas.atlasData["atlas/tall/long"];
+        const u0 = rect.x;
+        const v0 = rect.y;
+        const u1 = rect.x + rect.width;
+        const v1 = rect.y + rect.height;
+        /** @type {[number, number][]} */
+        const uv = [
+            [u1 / atlas.atlasSize, v1 / atlas.atlasSize],
+            [u1 / atlas.atlasSize, v0 / atlas.atlasSize],
+            [u0 / atlas.atlasSize, v0 / atlas.atlasSize],
+            [u0 / atlas.atlasSize, v1 / atlas.atlasSize]
+        ];
         bindVAO(vao);
         bindVBO(vbo);
         bufferData(new Float32Array([
-            +32, +8, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0,
-            +32, -8, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-            -32, -8, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-            -32, +8, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0
+            ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [0.5, 0.5, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [64, -16, 1]), 1.0, 1.0, 1.0, ...uv[0],
+            ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [0.5, -0.5, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [64, -16, 1]), 1.0, 1.0, 1.0, ...uv[1],
+            ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [-0.5, -0.5, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [64, -16, 1]), 1.0, 1.0, 1.0, ...uv[2],
+            ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [-0.5, 0.5, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [64, -16, 1]), 1.0, 1.0, 1.0, ...uv[3],
         ]));
         bindEBO(ebo);
         bufferDataElement(new Uint32Array([
@@ -65,7 +78,6 @@ export class SpriteRenderer {
         enableVertexAttribute(1);
         setVertexAttributePointer(2, 2, false, 8, 6);
         enableVertexAttribute(2);
-
     }
     /**
      * 
@@ -82,10 +94,10 @@ export class SpriteRenderer {
         bindVAO(vao);
         bindVBO(vbo);
         bufferData(new Float32Array([
-            +width / 2 + x, +height / 2 + y, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0,
-            +width / 2 + x, -height / 2 + y, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-            -width / 2 + x, -height / 2 + y, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-            -width / 2 + x, +height / 2 + y, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0
+            +width / 2 + x, +height / 2 + y, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+            +width / 2 + x, -height / 2 + y, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0,
+            -width / 2 + x, -height / 2 + y, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0,
+            -width / 2 + x, +height / 2 + y, 0.0, 1.0, 1.0, 1.0, 0.0, 1.0
         ]));
         bindEBO(ebo);
         bufferDataElement(new Uint32Array([
@@ -104,14 +116,31 @@ export class SpriteRenderer {
         this.vao = createVAO();
         this.vbo = createBuffer();
         this.ebo = createBuffer();
-        const { vao, vbo, ebo, program, textures } = this;
+        const { vao, vbo, ebo, program, textures, atlas } = this;
+        if (!atlas) {
+            throw new Error("Atlas not initialized");
+        }
+
+        const rect = atlas.atlasData["atlas/platform/door"];
+        const u0 = rect.x;
+        const v0 = rect.y;
+        const u1 = rect.x + rect.width;
+        const v1 = rect.y + rect.height;
+        /** @type {[number, number][]} */
+        const uv = [
+            [u1 / atlas.atlasSize, v1 / atlas.atlasSize],
+            [u1 / atlas.atlasSize, v0 / atlas.atlasSize],
+            [u0 / atlas.atlasSize, v0 / atlas.atlasSize],
+            [u0 / atlas.atlasSize, v1 / atlas.atlasSize]
+        ];
         bindVAO(vao);
         bindVBO(vbo);
+        console.log(rect.rotated)
         bufferData(new Float32Array([
-            cHalfSizeX, cHalfSizeY, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0,
-            cHalfSizeX, -cHalfSizeY, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-            -cHalfSizeX, -cHalfSizeY, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-            -cHalfSizeX, cHalfSizeY, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0
+            ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [cHalfSizeX, cHalfSizeY, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [1, -1, 1]), 1.0, 1.0, 1.0, ...uv[0],
+            ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [cHalfSizeX, -cHalfSizeY, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [1, -1, 1]), 1.0, 1.0, 1.0, ...uv[1],
+            ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [-cHalfSizeX, -cHalfSizeY, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [1, -1, 1]), 1.0, 1.0, 1.0, ...uv[2],
+            ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [-cHalfSizeX, cHalfSizeY, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [1, -1, 1]), 1.0, 1.0, 1.0, ...uv[3],
         ]));
         bindEBO(ebo);
         bufferDataElement(new Uint32Array([
@@ -134,7 +163,35 @@ export class SpriteRenderer {
         this.vao = createVAO();
         this.vbo = createBuffer();
         this.ebo = createBuffer();
-        const { vao, vbo, ebo, program, textures } = this;
+        const { vao, vbo, ebo, program, textures, atlas } = this;
+        if (!atlas) {
+            throw new Error("Atlas not initialized");
+        }
+        this.textures = [atlas.texture];
+        const blockRect = atlas.atlasData["atlas/platform/block"];
+        const onewayRect = atlas.atlasData["atlas/platform/small-platform"];
+        const blocku0 = blockRect.x;
+        const blockv0 = blockRect.y;
+        const blocku1 = blockRect.x + blockRect.width;
+        const blockv1 = blockRect.y + blockRect.height;
+        const onewayu0 = onewayRect.x;
+        const onewayv0 = onewayRect.y;
+        const onewayu1 = onewayRect.x + onewayRect.width;
+        const onewayv1 = onewayRect.y + onewayRect.height;
+        /** @type {[number, number][]} */
+        const blockuv = [
+            [blocku1 / atlas.atlasSize, blockv1 / atlas.atlasSize],
+            [blocku1 / atlas.atlasSize, blockv0 / atlas.atlasSize],
+            [blocku0 / atlas.atlasSize, blockv0 / atlas.atlasSize],
+            [blocku0 / atlas.atlasSize, blockv1 / atlas.atlasSize]
+        ];
+        /** @type {[number, number][]} */
+        const onewayuv = [
+            [onewayu1 / atlas.atlasSize, onewayv1 / atlas.atlasSize],
+            [onewayu1 / atlas.atlasSize, onewayv0 / atlas.atlasSize],
+            [onewayu0 / atlas.atlasSize, onewayv0 / atlas.atlasSize],
+            [onewayu0 / atlas.atlasSize, onewayv1 / atlas.atlasSize]
+        ];
         const buffers = new Float32Array(map.mWidth * map.mHeight * 4 * 8);
         const indices = new Uint32Array(map.mWidth * map.mHeight * 6);
         this.count = map.mWidth * map.mHeight * 6;
@@ -143,10 +200,10 @@ export class SpriteRenderer {
                 const position = map.getMapTilePosition(j, i);
                 const tile = map.mTiles[i * map.mWidth + j];
                 buffers.set([
-                    +cTileSize / 2 + position[0], +cTileSize / 2 + position[1], 0.0, 1.0, 0.0, 0.0, 1.0, 1.0,
-                    +cTileSize / 2 + position[0], -cTileSize / 2 + position[1], 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-                    -cTileSize / 2 + position[0], -cTileSize / 2 + position[1], 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-                    -cTileSize / 2 + position[0], +cTileSize / 2 + position[1], 0.0, 1.0, 1.0, 0.0, 0.0, 1.0
+                    ...vec3.rotateZ(vec3.create(), [+cTileSize / 2 + position[0], +cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], Math.PI * 3 / 2), 1.0, 1.0, 1.0, ...(tile === TileType.Block ? blockuv[0] : tile === TileType.OneWay ? onewayuv[0] : [0, 0]),
+                    ...vec3.rotateZ(vec3.create(), [+cTileSize / 2 + position[0], -cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], Math.PI * 3 / 2), 1.0, 1.0, 1.0, ...(tile === TileType.Block ? blockuv[1] : tile === TileType.OneWay ? onewayuv[1] : [0, 0]),
+                    ...vec3.rotateZ(vec3.create(), [-cTileSize / 2 + position[0], -cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], Math.PI * 3 / 2), 1.0, 1.0, 1.0, ...(tile === TileType.Block ? blockuv[2] : tile === TileType.OneWay ? onewayuv[2] : [0, 0]),
+                    ...vec3.rotateZ(vec3.create(), [-cTileSize / 2 + position[0], +cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], Math.PI * 3 / 2), 1.0, 1.0, 1.0, ...(tile === TileType.Block ? blockuv[3] : tile === TileType.OneWay ? onewayuv[3] : [0, 0]),
                 ], (i * map.mWidth + j) * 4 * 8);
                 if (tile) {
                     indices.set([
