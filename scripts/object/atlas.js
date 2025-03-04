@@ -1,4 +1,4 @@
-import { activeTexture, beginFramebuffer, bindEBO, bindTexture, bindVAO, bindVBO, bufferData, bufferDataElement, clearColor, createBuffer, createFramebuffer, createShaderProgram, createTexture, createVAO, drawElements, enableVertexAttribute, endFramebuffer, getScreenHeight, getScreenWidth, getUniformLocation, loadImage, loadText, mat4, setVertexAttributePointer, uniform1i, uniform4f, uniformMatrix4fv, updateTexture, useProgram, vec2, vec3, vec4 } from "../libs.js";
+import { activeTexture, beginFramebuffer, bindEBO, bindTexture, bindVAO, bindVBO, bufferData, bufferDataElement, clear, clearColor, createBuffer, createFramebuffer, createShaderProgram, createTexture, createVAO, drawElements, enableVertexAttribute, endFramebuffer, getScreenHeight, getScreenWidth, getUniformLocation, loadImage, loadText, mat4, setVertexAttributePointer, uniform1i, uniform4f, uniformMatrix4fv, updateTexture, useProgram, vec2, vec3, vec4 } from "../libs.js";
 
 /**
  * 
@@ -174,6 +174,7 @@ export function buildAtlas() {
     const framebuffer = createFramebuffer(atlasSize, atlasSize);
     beginFramebuffer(framebuffer);
     clearColor(0, 0, 0, 0);
+    clear();
     /**
      * @type {AtlasNode}
      */

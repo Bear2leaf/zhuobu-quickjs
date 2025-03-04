@@ -93,7 +93,7 @@ export function init() {
     initContext();
     const atlas = buildAtlas();
     atlasRenderer.setAtlas(atlas);
-    atlasRenderer.initQuad(0, 0, 128, 128)
+    atlasRenderer.initQuad(0, 0, atlas.atlasSize, atlas.atlasSize);
     Slopes.init();
     const program = createShaderProgram(vertexShaderSource, fragmentShaderSource);
     addProgramCache("sprite", program);
@@ -174,6 +174,9 @@ export function render(alpha) {
     uniformMatrix4fv(getUniformLocationCached(program, "u_projection"), false, m);
     mat4.identity(m);
     vec2.lerp(viewOffset, viewOffset, vec2.scale(vec2.create(), [character.position[0], character.position[1] + 100], zoom), 0.05);
+    vec2.scale(viewOffset, viewOffset, 1 / zoom);
+    vec2.round(viewOffset, viewOffset);
+    vec2.scale(viewOffset, viewOffset, zoom);
     mat4.lookAt(m, [...viewOffset, 1], [...viewOffset, -1], [0, 1, 0]);
     uniformMatrix4fv(getUniformLocationCached(program, "u_view"), false, m);
     mat4.identity(m)

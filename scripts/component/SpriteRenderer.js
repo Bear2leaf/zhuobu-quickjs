@@ -135,7 +135,6 @@ export class SpriteRenderer {
         ];
         bindVAO(vao);
         bindVBO(vbo);
-        console.log(rect.rotated)
         bufferData(new Float32Array([
             ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [cHalfSizeX, cHalfSizeY, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [1, -1, 1]), 1.0, 1.0, 1.0, ...uv[0],
             ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [cHalfSizeX, -cHalfSizeY, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [1, -1, 1]), 1.0, 1.0, 1.0, ...uv[1],

@@ -289,6 +289,7 @@ export function clearColor(r, g, b, a) {
 export function viewport(x, y, width, height) {
     // Implementation of viewport
     context.gl.viewport(x, y, width, height);
+    context.gl.scissor(x, y, width, height);
 
 }
 
@@ -356,6 +357,8 @@ export function initContext() {
     gl.canvas.width = getScreenWidth();
     gl.canvas.height = getScreenHeight();
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 }
 
 /**

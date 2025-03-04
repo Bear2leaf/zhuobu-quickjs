@@ -523,8 +523,9 @@ static JSValue js_initContext(JSContext* ctx,
         return JS_UNDEFINED;
     }    
     glfwSwapInterval(1);
-
-return JS_UNDEFINED;
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    return JS_UNDEFINED;
 }
 static JSValue js_terminate(JSContext* ctx,
     JSValueConst this_val,
