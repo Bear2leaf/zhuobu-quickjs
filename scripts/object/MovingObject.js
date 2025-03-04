@@ -680,7 +680,6 @@ export class MovingObject {
 
     }
     updatePhysics() {
-        vec2.copy(this.mOldPosition, this.mPosition);
         this.mPS.pushedBottom = this.mPS.pushesBottom;
         this.mPS.pushedRight = this.mPS.pushesRight;
         this.mPS.pushedLeft = this.mPS.pushesLeft;
@@ -717,6 +716,7 @@ export class MovingObject {
             this.mSpeed[0] = Math.min(0.0, this.mSpeed[0]);
 
 
+        vec2.copy(this.mOldPosition, this.mPosition);
         vec2.scale(this.mOffset, this.mSpeed, this.deltaTime);
         if (this.mMountParent != null) {
             if (this.hasCollisionDataFor(this.mMountParent)) {

@@ -10,6 +10,14 @@
       {
         "value": "glfw-3.4",
         "type": "folder"
+      },
+      {
+        "value": "resources/font/NotoSansSC-Regular.ttf",
+        "type": "file"
+      },
+      {
+        "value": "resources/font/fa-solid-900.ttf",
+        "type": "file"
       }
     ],
     "include": []

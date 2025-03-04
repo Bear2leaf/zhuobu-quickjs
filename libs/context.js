@@ -289,7 +289,6 @@ export function clearColor(r, g, b, a) {
 export function viewport(x, y, width, height) {
     // Implementation of viewport
     context.gl.viewport(x, y, width, height);
-    context.gl.scissor(x, y, width, height);
 
 }
 
@@ -437,8 +436,7 @@ export function bindTexture(texture) {
  */
 export function updateTexture(image) {
     const gl = context.gl;
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);

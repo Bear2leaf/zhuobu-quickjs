@@ -1,3 +1,46 @@
+type Glyph = {
+  unicode: number;
+  advance: number;
+  planeBounds: {
+    left: number;
+    right: number;
+    top: number;
+    bottom: number;
+  }
+  atlasBounds: {
+    left: number;
+    right: number;
+    top: number;
+    bottom: number;
+  }
+};
+type TextOptions = {
+  font: {
+    atlas: {
+      distanceRange: number;
+      width: number;
+      height: number;
+    }
+    variants: {
+      glyphs: Glyph[]
+      kerning: {
+        first: number;
+        second: number;
+        amount: number;
+      }[]
+    }[]
+  };
+  text: string;
+  width?: number;
+  align?: "left" | "center" | "right";
+  size?: number;
+  letterSpacing?: number;
+  lineHeight?: number;
+  wordSpacing?: number;
+  wordBreak?: boolean;
+};
+type Line = { width: number; glyphs: [Glyph, number][]; }
+type Buffers = { id: Float32Array, position: Float32Array, uv: Float32Array, index: Uint32Array }
 type Rectangle = {
   x: number;
   y: number;
@@ -11,16 +54,16 @@ type AtlasContainer = {
   atlasSize: number
 }
 type AtlasNode = {
-    x: number;
-    y: number;
-    w: number;
-    h: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 } & ({
-    used: true;
-    child: [Node, Node];
+  used: true;
+  child: [Node, Node];
 } | {
-    used: false;
-    child: null;
+  used: false;
+  child: null;
 });
 type Framebuffer = {
   texture: WebGLTexture

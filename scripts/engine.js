@@ -1,4 +1,5 @@
 import { SpriteRenderer } from "./component/SpriteRenderer.js";
+import { TextRenderer } from "./component/TextRenderer.js";
 import { activeTexture, bindEBO, bindTexture, bindVAO, bindVBO, bufferData, bufferDataElement, clear, clearColor, createBuffer, createShaderProgram, createTexture, createVAO, drawElements, enableVertexAttribute, getKey, getScreenHeight, getScreenWidth, getTime, getUniformLocation, initContext, loadImage, loadText, mat4, pollEvents, resize, setVertexAttributePointer, shouldCloseWindow, swapBuffers, terminate, uniform1f, uniform1i, uniformMatrix4fv, updateTexture, useProgram, vec2 } from "./libs.js";
 import { cHalfSizeX, cHalfSizeY, cTileSize, FPS, zoom } from "./misc/constants.js";
 import { KeyCode, KeyCodeGLFW, KeyInput, ObjectType, TileType } from "./misc/enums.js";
@@ -12,18 +13,20 @@ import { Slopes } from "./object/Slopes.js";
 
 
 /** @type {string}*/
+let fontSource;
+/** @type {string}*/
 let vertexShaderSource;
 /** @type {string}*/
 let fragmentShaderSource;
+/** @type {string}*/
+let textVertexShaderSource;
+/** @type {string}*/
+let textFragmentShaderSource;
 
 /** @type {ImageContainer} */
-let image1;
-/** @type {ImageContainer} */
-let image2;
+let imageFont;
 /** @type {MovingObject} */
 let character;
-/** @type {ImageContainer} */
-let imageTile1;
 
 
 
@@ -75,8 +78,10 @@ export function getProgram(name) {
 export async function load() {
     vertexShaderSource = await loadText("resources/glsl/sprite.vert.sk");
     fragmentShaderSource = await loadText("resources/glsl/sprite.frag.sk");
-    image1 = await loadImage("resources/image/container.jpg");
-    image2 = await loadImage("resources/image/awesomeface.png");
+    textVertexShaderSource = await loadText("resources/glsl/text.vert.sk");
+    textFragmentShaderSource = await loadText("resources/glsl/text.frag.sk");
+    fontSource = await loadText("resources/font/NotoSansSC-Regular.json");
+    imageFont = await loadImage("resources/font/NotoSansSC-Regular.png");
     await loadAtlasShaderSource();
     await loadAtlasImages();
 }
@@ -89,15 +94,26 @@ const mMovingPlatforms = new Array();
 const map = new GameMap();
 
 const atlasRenderer = new SpriteRenderer();
+const textRenderer = new TextRenderer();
 export function init() {
     initContext();
     const atlas = buildAtlas();
     atlasRenderer.setAtlas(atlas);
     atlasRenderer.initQuad(0, 0, atlas.atlasSize, atlas.atlasSize);
     Slopes.init();
-    const program = createShaderProgram(vertexShaderSource, fragmentShaderSource);
-    addProgramCache("sprite", program);
-    useProgram(program);
+    {
+        const program = createShaderProgram(textVertexShaderSource, textFragmentShaderSource);
+        addProgramCache("text", program);
+        useProgram(program);
+    }
+    textRenderer.initImageTexture(imageFont);
+    textRenderer.setFont(JSON.parse(fontSource));
+    textRenderer.initText();
+    {
+        const program = createShaderProgram(vertexShaderSource, fragmentShaderSource);
+        addProgramCache("sprite", program);
+        useProgram(program);
+    }
     {
         character = new Character(map, inputs, prevInputs);
         character.mSpriteRenderer.setAtlas(atlas);
@@ -212,6 +228,9 @@ export function render(alpha) {
         uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, model);
         atlasRenderer.render();
     }
+    {
+        textRenderer.render();
+    }
 }
 
 /**
@@ -278,7 +297,8 @@ export async function mainQuickjs() {
         // - Reset after one second
         if (getTime() - timer > 1.0) {
             timer++;
-            console.log(`FPS: ${frames} Updates: ${updates}`);
+            const msg = `FPS: ${frames} Updates: ${updates}`;
+            textRenderer.updateText(msg);
             updates = 0, frames = 0;
         }
     }
@@ -310,7 +330,8 @@ export async function main() {
         // - Reset after one second
         if (getTime() - timer > 1.0) {
             timer++;
-            console.log(`FPS: ${frames} Updates: ${updates}`);
+            const msg = `FPS: ${frames} Updates: ${updates}`;
+            textRenderer.updateText(msg);
             updates = 0, frames = 0;
         }
         requestAnimationFrame(loop);

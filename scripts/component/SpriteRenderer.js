@@ -244,8 +244,6 @@ export class SpriteRenderer {
         }
         useProgram(getProgram(program));
         bindVAO(vao);
-        bindVBO(vbo);
-        bindEBO(ebo);
         uniform1f(getUniformLocationCached(program, "u_time"), 0);
         for (let index = 0; index < textures.length; index++) {
             const element = textures[index];
