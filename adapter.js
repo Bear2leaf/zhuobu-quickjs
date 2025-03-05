@@ -1,5 +1,3 @@
-//@ts-nocheck
-
 const { platform } = wx.getSystemInfoSync()
 const windowInfo = wx.getWindowInfo();
 
@@ -46,20 +44,22 @@ function Image() {
     return wx.createImage();
 }
 
+function AudioContext() {
+    return wx.createWebAudioContext();
+}
+
 function pointerEventHandlerFactory(type) {
     return (event) => {
         const touches = [];
-        touches.push(...event.changedTouches)
+        touches.push(...event.changedTouches);
         for (const change of touches) {
             document.dispatchEvent({
                 pageX: change.pageX,
                 pageY: change.pageY,
-                offsetX: change.offsetX,
-                offsetY: change.offsetY,
                 pointerId: change.identifier,
-                target: document,
                 type,
-                pointerType: "touch"
+                pointerType: "touch",
+                preventDefault: () => { }
             })
         }
     }
@@ -68,10 +68,12 @@ wx.onTouchStart(pointerEventHandlerFactory('pointerdown'))
 wx.onTouchMove(pointerEventHandlerFactory('pointermove'))
 wx.onTouchEnd(pointerEventHandlerFactory('pointerup'))
 wx.onTouchCancel(pointerEventHandlerFactory('pointercancel'))
+wx.onTouchCancel(pointerEventHandlerFactory('pointerleave'))
 
 let startupTime = wx.getPerformance().now()
 const _window = {
     Image,
+    AudioContext,
     document,
     innerWidth: windowInfo.windowWidth,
     innerHeight: windowInfo.windowHeight,

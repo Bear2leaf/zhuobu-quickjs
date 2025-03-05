@@ -1,8 +1,8 @@
 import { SpriteRenderer } from "./component/SpriteRenderer.js";
 import { TextRenderer } from "./component/TextRenderer.js";
-import { activeTexture, bindEBO, bindTexture, bindVAO, bindVBO, bufferData, bufferDataElement, clear, clearColor, createBuffer, createShaderProgram, createTexture, createVAO, drawElements, enableVertexAttribute, getKey, getScreenHeight, getScreenWidth, getTime, getUniformLocation, initContext, loadImage, loadText, mat4, pollEvents, resize, setVertexAttributePointer, shouldCloseWindow, swapBuffers, terminate, uniform1f, uniform1i, uniformMatrix4fv, updateTexture, useProgram, vec2 } from "./libs.js";
-import { cHalfSizeX, cHalfSizeY, cTileSize, FPS, zoom } from "./misc/constants.js";
-import { KeyCode, KeyCodeGLFW, KeyInput, ObjectType, TileType } from "./misc/enums.js";
+import { clear, clearColor, createShaderProgram, getKey, getScreenHeight, getScreenWidth, getTime, getUniformLocation, initContext, loadImage, loadText, mat4, pollEvents, resize, shouldCloseWindow, swapBuffers, terminate, uniformMatrix4fv, useProgram, vec2 } from "./libs.js";
+import { FPS, zoom } from "./misc/constants.js";
+import { KeyCode, KeyCodeGLFW, KeyInput, ObjectType } from "./misc/enums.js";
 import { buildAtlas, addAtlas as loadAtlasImages, loadAtlasShaderSource } from "./object/atlas.js";
 import { Character } from "./object/Character.js";
 import { Map as GameMap } from "./object/Map.js";

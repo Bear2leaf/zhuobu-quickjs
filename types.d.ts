@@ -182,17 +182,36 @@ declare module "polyline-normals" {
 }
 declare const console: {
   log: (...args: any[]) => void
+  error: (...args: any[]) => void
 }
 declare const performance: {
   now(): number
 }
+
+type PointerEvent = {
+  pageX: number,
+  pageY: number,
+  pointerId: number,
+  type: "pointerdown" | "pointerup" | "pointermove" | "pointercancel",
+  pointerType: "touch",
+}
+
+type PointerData = {
+  id: number,
+  x: number,
+  y: number,
+}
+
 declare const document: {
   querySelector(selector: string): HTMLCanvasElement
-  addEventListener(type: "keyup" | "keydown", listener: ({ keyCode }) => void)
+  addEventListener(type: "keydown" | "keyup", listener: ({ keyCode }) => void)
+  addEventListener(type: "pointerdown" | "pointerup" | "pointermove" | "pointercancel" | "pointerleave", listener: (pointerEvent: PointerEvent) => void)
+  addEventListener(type: "contextmenu", listener: (pointerEvent: { preventDefault: () => void }) => void)
 }
 declare function fetch(url: string): Promise<Response>;
 declare class Response {
   text(): Promise<string>
+  arrayBuffer(): Promise<ArrayBuffer>
 };
 type EnumValue<T> = T extends { [key: string]: infer U } ? U : never;
 type EnumSet<T> = T extends { [key: string]: infer U } ? Set<U> : never;

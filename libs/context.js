@@ -4,13 +4,15 @@
 /**
  * The context object.
  * @type {{
- *   gl: WebGL2RenderingContext
+ *   gl: WebGL2RenderingContext,
+ *   audio: AudioContext
  * }}
  */
 const context = {
-    //@ts-ignore
+    // @ts-ignore
     gl: null,
-
+    // @ts-ignore
+    audio: null
 }
 const keyset = new Set();
 const vaos = new Set();
@@ -358,6 +360,125 @@ export function initContext() {
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+    const audio = new AudioContext();
+    context.audio = audio;
+    /** @type {Readonly<[PointerData, PointerData]>} */
+    const dualPointer = [{
+        x: 0,
+        y: 0,
+        id: 0,
+    }, {
+        x: 0,
+        y: 0,
+        id: 0,
+    }]
+    /**
+     * 
+     * @param {PointerEvent} e 
+     */
+    function assignPointer(e) {
+        if (!dualPointer[0].id) {
+            dualPointer[0].id = e.pointerId;
+            dualPointer[0].x = e.pageX;
+            dualPointer[0].y = e.pageY;
+
+        } else if (!dualPointer[1].id) {
+            dualPointer[1].id = e.pointerId;
+            dualPointer[1].x = e.pageX;
+            dualPointer[1].y = e.pageY;
+        }
+    }
+    /**
+     *  
+     * @param {PointerEvent} e
+     */
+    function clearPointer(e) {
+        dualPointer.forEach((pointer, isSecondary) => {
+            if (pointer.id === e.pointerId) {
+                pointer.id = 0;
+                pointer.x = 0;
+                pointer.y = 0;
+                if (!isSecondary) {
+                    keyset.delete(39);
+                    keyset.delete(37);
+                    keyset.delete(40);
+                    keyset.delete(32);
+                }
+            }
+        });
+    }
+    /**
+     *  
+     * @param {PointerEvent} e
+     */
+    function updatePointer(e) {
+        dualPointer.forEach((pointer, isSecondary) => {
+            if (pointer.id === e.pointerId) {
+                if (!isSecondary) {
+                    if (pointer.x - e.pageX < -50) {
+                        keyset.add(39);
+                        keyset.delete(37);
+                    } else if (pointer.x - e.pageX > 50) {
+                        keyset.add(37);
+                        keyset.delete(39);
+                    } else {
+                        keyset.delete(39);
+                        keyset.delete(37);
+                    }
+                    if (pointer.y - e.pageY < -50) {
+                        keyset.add(40);
+                        keyset.delete(32);
+                    } else if (pointer.y - e.pageY > 50) {
+                        keyset.add(32);
+                        keyset.delete(40);
+                    } else {
+                        keyset.delete(40);
+                        keyset.delete(32);
+                    }
+                }
+            }
+        });
+    }
+    document.addEventListener("pointerdown", (event) => {
+        if (event.pointerType !== "touch") {
+            return
+        }
+        assignPointer(event);
+    });
+    document.addEventListener("pointerup", (event) => {
+        if (event.pointerType !== "touch") {
+            return
+        }
+        clearPointer(event);
+    });
+    document.addEventListener("pointerleave", (event) => {
+        if (event.pointerType !== "touch") {
+            return
+        }
+        clearPointer(event);
+    });
+    document.addEventListener("pointermove", (event) => {
+        if (event.pointerType !== "touch") {
+            return
+        }
+        updatePointer(event);
+    });
+    document.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+    });
+
+
+    fetch("resources/music/song18.mp3").then(response => response.arrayBuffer()).then(buffer => {
+        audio.decodeAudioData(buffer, (audioBuffer) => {
+            const source = audio.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(audio.destination);
+            source.start();
+        }, (error) => {
+            console.error(error);
+        });
+    });
 }
 
 /**

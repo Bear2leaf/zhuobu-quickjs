@@ -10,6 +10,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#include "miniaudio.h"
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 
@@ -486,11 +488,19 @@ static JSValue js_getTime(JSContext* ctx,
     return JS_NewFloat64(ctx, glfwGetTime());
 }
 
+ma_result result;
+ma_engine engine;
 static JSValue js_initContext(JSContext* ctx,
     JSValueConst this_val,
     int argc,
     JSValueConst* argv) {
 
+    result = ma_engine_init(NULL, &engine);
+    if (result != MA_SUCCESS) {
+        printf("Failed to initialize audio engine.\n");
+        return JS_UNDEFINED;
+    }
+    ma_engine_play_sound(&engine, "resources/music/song18.mp3", NULL);
     // glfw: initialize and configure
     // ------------------------------
     glfwInit();
