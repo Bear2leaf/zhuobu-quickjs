@@ -1,6 +1,6 @@
 import { SpriteRenderer } from "./component/SpriteRenderer.js";
 import { TextRenderer } from "./component/TextRenderer.js";
-import { clear, clearColor, createShaderProgram, getKey, getScreenHeight, getScreenWidth, getTime, getUniformLocation, initContext, loadImage, loadText, mat4, pollEvents, resize, shouldCloseWindow, swapBuffers, terminate, uniformMatrix4fv, useProgram, vec2 } from "./libs.js";
+import { clear, clearColor, createShaderProgram, getKey, getScreenHeight, getScreenWidth, getTime, getUniformLocation, initContext, loadAudio, loadImage, loadText, mat4, playAudio, pollEvents, resize, shouldCloseWindow, stopAudio, swapBuffers, terminate, uniformMatrix4fv, useProgram, vec2 } from "./libs.js";
 import { FPS, zoom } from "./misc/constants.js";
 import { KeyCode, KeyCodeGLFW, KeyInput, ObjectType } from "./misc/enums.js";
 import { buildAtlas, addAtlas as loadAtlasImages, loadAtlasShaderSource } from "./object/atlas.js";
@@ -82,6 +82,8 @@ export async function load() {
     textFragmentShaderSource = await loadText("resources/glsl/text.frag.sk");
     fontSource = await loadText("resources/font/NotoSansSC-Regular.json");
     imageFont = await loadImage("resources/font/NotoSansSC-Regular.png");
+    await loadAudio("resources/audio/song18.mp3");
+    await loadAudio("resources/audio/bleep.mp3");
     await loadAtlasShaderSource();
     await loadAtlasImages();
 }
@@ -97,6 +99,7 @@ const atlasRenderer = new SpriteRenderer();
 const textRenderer = new TextRenderer();
 export function init() {
     initContext();
+    playAudio(0, 1, true);
     const atlas = buildAtlas();
     atlasRenderer.setAtlas(atlas);
     atlasRenderer.initQuad(0, 0, atlas.atlasSize, atlas.atlasSize);

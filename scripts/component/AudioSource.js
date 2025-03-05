@@ -1,3 +1,4 @@
+import { playAudio } from "../libs.js";
 import { AudioClip } from "../object/AudioClip.js";
 
 export class AudioSource {
@@ -10,6 +11,6 @@ export class AudioSource {
      * @param {number} volume 
      */
     playOneShot(clip, volume) {
-        
+        playAudio(clip.id, volume, false);
     }
 }

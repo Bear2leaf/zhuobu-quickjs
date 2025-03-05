@@ -11,13 +11,77 @@
 const context = {
     // @ts-ignore
     gl: null,
-    // @ts-ignore
-    audio: null
+    audio: new AudioContext()
 }
 const keyset = new Set();
 const vaos = new Set();
 const vbos = new Set();
 const GLSL_HEADER = `#version 300 es\nprecision highp float;`;
+
+const MAX_AUDIO = 4;
+/**
+ * @type {{filename: string, buffer: unknown}[]}
+ */
+const audiobuffers = [];
+const audioNodes = new Array(MAX_AUDIO);
+
+/**
+ * 
+ * @param {string} filename 
+ * @returns {Promise<number>}
+ */
+export async function loadAudio(filename) {
+    return new Promise((resolve, reject) => {
+        const audio = audiobuffers.find(audio => audio.filename === filename);
+        if (audio) {
+            resolve(audiobuffers.indexOf(audio));
+        } else {
+            fetch(filename).then(response => response.arrayBuffer()).then(buffer => {
+                context.audio.decodeAudioData(buffer, (audioBuffer) => {
+                    audiobuffers.push({
+                        filename,
+                        buffer: audioBuffer
+                    });
+                    resolve(audiobuffers.length - 1);
+                }, (error) => {
+                    throw new Error(`Failed to decode audio data: ${filename}`);
+                });
+            })
+        }
+    })
+}
+/**
+ * 
+ * @param {number} id 
+ * @param {number} volume 
+ * @param {boolean} loop 
+ */
+export function playAudio(id, volume, loop) {
+    const buffer = audiobuffers[id].buffer;
+    if (!buffer) {
+        throw new Error(`Failed to get audio buffer: ${id}`);
+    }
+    const source = context.audio.createBufferSource();
+    source.buffer = buffer;
+    source.loop = loop;
+    const gain = context.audio.createGain();
+    gain.gain.value = volume;
+    source.connect(gain);
+    gain.connect(context.audio.destination);
+    source.start();
+    audioNodes[id] = source;
+}
+/**
+ * 
+ * @param {number} id 
+ */
+export function stopAudio(id) {
+    if (id >= MAX_AUDIO) {
+        throw new Error(`Invalid audio id: ${id}`);
+    }
+    audioNodes[id].stop();
+}
+
 /**
  * Load text from a file.
  * @param {string} filename - The name of the file to load.
@@ -361,8 +425,6 @@ export function initContext() {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-    const audio = new AudioContext();
-    context.audio = audio;
     /** @type {Readonly<[PointerData, PointerData]>} */
     const dualPointer = [{
         x: 0,
@@ -469,16 +531,6 @@ export function initContext() {
     });
 
 
-    fetch("resources/music/song18.mp3").then(response => response.arrayBuffer()).then(buffer => {
-        audio.decodeAudioData(buffer, (audioBuffer) => {
-            const source = audio.createBufferSource();
-            source.buffer = audioBuffer;
-            source.connect(audio.destination);
-            source.start();
-        }, (error) => {
-            console.error(error);
-        });
-    });
 }
 
 /**

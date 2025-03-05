@@ -458,6 +458,79 @@ static JSValue js_viewport(JSContext* ctx,
     return JS_UNDEFINED;
 }
 
+
+ma_engine* pEngine;
+
+struct Audio {
+    ma_sound* sound;
+    const char* filename;
+};
+
+#define MAX_AUDIO 4
+struct Audio audios[MAX_AUDIO];
+int audioCount = 0;
+
+static JSValue js_loadAudio(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    ma_result result;
+    if (pEngine == NULL) {
+        pEngine = malloc(sizeof(*pEngine));
+        result = ma_engine_init(NULL, pEngine);
+        if (result != MA_SUCCESS) {
+            printf("Failed to initialize audio engine.\n");
+            return JS_EXCEPTION;
+        }
+    }
+    if (audioCount >= MAX_AUDIO) {
+        printf("Too many audio files loaded.\n");
+        return JS_EXCEPTION;
+    }
+    audios[audioCount].filename = JS_ToCString(ctx, argv[0]);
+    audios[audioCount].sound = malloc(sizeof(*(audios[audioCount].sound)));
+    result = ma_sound_init_from_file(pEngine, audios[audioCount].filename, 0, NULL, NULL, (audios[audioCount].sound));
+    if (result != MA_SUCCESS) {
+        printf("Failed to load audio file: %s\n", audios[audioCount].filename);
+        return JS_EXCEPTION;
+    }
+    return JS_NewInt32(ctx, audioCount++);
+}
+
+static JSValue js_playAudio(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    int index;
+    double volume;
+    int loop;
+    JS_ToInt32(ctx, &index, argv[0]);
+    JS_ToFloat64(ctx, &volume, argv[1]);
+    JS_ToInt32(ctx, &loop, argv[2]);
+    audios[index].sound = malloc(sizeof(*(audios[index].sound)));
+    ma_result result;
+    result = ma_sound_init_from_file(pEngine, audios[index].filename, 0, NULL, NULL, (audios[index].sound));
+    if (result != MA_SUCCESS) {
+        printf("Failed to load audio file: %s\n", audios[index].filename);
+        return JS_EXCEPTION;
+    }
+    ma_sound_set_volume(audios[index].sound, volume);
+    ma_sound_set_looping(audios[index].sound, loop);
+    ma_sound_start(audios[index].sound);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_stopAudio(JSContext* ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst* argv) {
+    int index;
+    JS_ToInt32(ctx, &index, argv[0]);
+    ma_sound_stop(audios[index].sound);
+    return JS_UNDEFINED;
+}
+
+
 static JSValue js_shouldCloseWindow(JSContext* ctx,
     JSValueConst this_val,
     int argc,
@@ -488,19 +561,12 @@ static JSValue js_getTime(JSContext* ctx,
     return JS_NewFloat64(ctx, glfwGetTime());
 }
 
-ma_result result;
-ma_engine engine;
+
 static JSValue js_initContext(JSContext* ctx,
     JSValueConst this_val,
     int argc,
     JSValueConst* argv) {
 
-    result = ma_engine_init(NULL, &engine);
-    if (result != MA_SUCCESS) {
-        printf("Failed to initialize audio engine.\n");
-        return JS_UNDEFINED;
-    }
-    ma_engine_play_sound(&engine, "resources/music/song18.mp3", NULL);
     // glfw: initialize and configure
     // ------------------------------
     glfwInit();
@@ -681,6 +747,9 @@ static const JSCFunctionListEntry js_context_funcs[] = {
     JS_CFUNC_DEF("createFramebuffer", 2, js_createFramebuffer),
     JS_CFUNC_DEF("beginFramebuffer", 1, js_beginFramebuffer),
     JS_CFUNC_DEF("endFramebuffer", 1, js_endFramebuffer),
+    JS_CFUNC_DEF("loadAudio", 1, js_loadAudio),
+    JS_CFUNC_DEF("playAudio", 3, js_playAudio),
+    JS_CFUNC_DEF("stopAudio", 1, js_stopAudio),
 };
 
 
