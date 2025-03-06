@@ -419,9 +419,11 @@ static JSValue js_drawElements(JSContext* ctx,
     JSValueConst this_val,
     int argc,
     JSValueConst* argv) {
+    int offset;
     int count;
-    JS_ToInt32(ctx, &count, argv[0]);
-    glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, 0);
+    JS_ToInt32(ctx, &offset, argv[0]);
+    JS_ToInt32(ctx, &count, argv[1]);
+    glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, (void *)(uintptr_t)(offset * 4));
     return JS_UNDEFINED;
 }
 

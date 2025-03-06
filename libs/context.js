@@ -237,12 +237,13 @@ export function enableVertexAttribute(index) {
 
 /**
  * Draw elements from array data.
+ * @param {number} offset - The starting offset in the array.
  * @param {number} count - The number of elements to be rendered.
  */
-export function drawElements(count) {
+export function drawElements(offset, count) {
     // Implementation of drawElements
     const gl = context.gl
-    gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_INT, 0);
+    gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_INT, offset * 4);
 }
 
 /**

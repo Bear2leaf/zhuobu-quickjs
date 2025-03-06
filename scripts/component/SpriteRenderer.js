@@ -1,5 +1,5 @@
 import { getProgram, getUniformLocationCached } from "../engine.js";
-import { activeTexture, bindEBO, bindTexture, bindVAO, bindVBO, bufferData, bufferDataElement, createBuffer, createTexture, createVAO, drawElements, enableVertexAttribute, setVertexAttributePointer, uniform1f, uniform1i, updateTexture, useProgram, vec3 } from "../libs.js";
+import { activeTexture, bindEBO, bindTexture, bindVAO, bindVBO, bufferData, bufferDataElement, createBuffer, createTexture, createVAO, drawElements, enableVertexAttribute, setVertexAttributePointer, uniform1f, uniform1i, updateTexture, useProgram, vec2, vec3 } from "../libs.js";
 import { cHalfSizeX, cHalfSizeY, cTileSize } from "../misc/constants.js";
 import { TileCollisionType } from "../misc/enums.js";
 import { Map as GameMap } from "../object/Map.js";
@@ -10,6 +10,10 @@ export class SpriteRenderer {
         /** @type {WebGLTexture[]} */
         this.textures = [];
         this.program = "sprite"
+        this.offset = 0;
+        this.maxFrames = 1;
+        this.frames = 0;
+        this.count = 6;
     }
     /**
      * 
@@ -68,7 +72,6 @@ export class SpriteRenderer {
             0, 1, 3,  // first Triangle
             1, 2, 3   // second Triangle
         ]));
-        this.count = 6;
         setVertexAttributePointer(0, 3, false, 8, 0);
         enableVertexAttribute(0);
         setVertexAttributePointer(1, 3, false, 8, 3);
@@ -119,9 +122,10 @@ export class SpriteRenderer {
         }
 
         const rect = atlas.atlasData["atlas/platform/character"];
+        const maxFrames = this.maxFrames = Math.floor(rect.width / (cHalfSizeX * 2));
         const u0 = rect.x;
         const v0 = rect.y;
-        const u1 = rect.x + rect.width;
+        const u1 = rect.x + rect.width / maxFrames;
         const v1 = rect.y + rect.height;
         /** @type {[number, number][]} */
         const uv = [
@@ -130,20 +134,34 @@ export class SpriteRenderer {
             [u0 / atlas.atlasSize, v0 / atlas.atlasSize],
             [u0 / atlas.atlasSize, v1 / atlas.atlasSize]
         ];
+        const buffer = new Float32Array(8 * 4 * maxFrames);
+        const indices = new Uint32Array(6 * maxFrames);
+        for (let i = 0; i < maxFrames; i++) {
+            buffer.set([
+                ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [cHalfSizeX, cHalfSizeY, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [1, -1, 1]), 1.0, 1.0, 1.0, ...uv[0],
+                ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [cHalfSizeX, -cHalfSizeY, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [1, -1, 1]), 1.0, 1.0, 1.0, ...uv[1],
+                ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [-cHalfSizeX, -cHalfSizeY, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [1, -1, 1]), 1.0, 1.0, 1.0, ...uv[2],
+                ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [-cHalfSizeX, cHalfSizeY, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [1, -1, 1]), 1.0, 1.0, 1.0, ...uv[3],
+            ], i * 8 * 4);
+            vec2.add(uv[0], uv[0], [(cHalfSizeX * 2) / atlas.atlasSize, 0])
+            vec2.add(uv[1], uv[1], [(cHalfSizeX * 2) / atlas.atlasSize, 0])
+            vec2.add(uv[2], uv[2], [(cHalfSizeX * 2) / atlas.atlasSize, 0])
+            vec2.add(uv[3], uv[3], [(cHalfSizeX * 2) / atlas.atlasSize, 0])
+            indices.set([
+                i * 4 + 0,
+                i * 4 + 1,
+                i * 4 + 3,
+                i * 4 + 1,
+                i * 4 + 2,
+                i * 4 + 3
+            ], i * 6);
+        }
         bindVAO(vao);
         bindVBO(vbo);
-        bufferData(new Float32Array([
-            ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [cHalfSizeX, cHalfSizeY, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [1, -1, 1]), 1.0, 1.0, 1.0, ...uv[0],
-            ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [cHalfSizeX, -cHalfSizeY, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [1, -1, 1]), 1.0, 1.0, 1.0, ...uv[1],
-            ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [-cHalfSizeX, -cHalfSizeY, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [1, -1, 1]), 1.0, 1.0, 1.0, ...uv[2],
-            ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [-cHalfSizeX, cHalfSizeY, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [1, -1, 1]), 1.0, 1.0, 1.0, ...uv[3],
-        ]));
+        bufferData(buffer);
         bindEBO(ebo);
-        bufferDataElement(new Uint32Array([
-            0, 1, 3,  // first Triangle
-            1, 2, 3   // second Triangle
-        ]));
-        this.count = 6;
+        bufferDataElement(indices);
+        this.offset = 0;
         setVertexAttributePointer(0, 3, false, 8, 0);
         enableVertexAttribute(0);
         setVertexAttributePointer(1, 3, false, 8, 3);
@@ -248,9 +266,12 @@ export class SpriteRenderer {
             bindTexture(element);
             uniform1i(getUniformLocationCached(program, `u_texture${index}`), index);
         }
-        if (this.count) {
-            drawElements(this.count);
+        if (this.frames % 10 === 0) {
+            this.frames = 0;
+            this.offset = (this.offset + 1) % this.maxFrames;
         }
+        drawElements(this.offset * 6, this.count);
+        this.frames++;
     }
 }
 

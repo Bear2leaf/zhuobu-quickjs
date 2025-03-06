@@ -204,7 +204,7 @@ export function render(alpha) {
     mat4.ortho(m, -getScreenWidth() / 2, getScreenWidth() / 2, -getScreenHeight() / 2, getScreenHeight() / 2, 1, -1);
     uniformMatrix4fv(getUniformLocationCached(program, "u_projection"), false, m);
     mat4.identity(m);
-    vec2.lerp(viewOffset, viewOffset, vec2.scale(vec2.create(), [character.position[0], character.position[1]], zoom), 0.1);
+    vec2.lerp(viewOffset, viewOffset, vec2.scale(vec2.create(), [character.position[0], character.position[1]], zoom), 0.05);
     const rounded = vec2.round(vec2.create(), viewOffset);
     mat4.lookAt(m, [...rounded, 1], [...rounded, -1], [0, 1, 0]);
     uniformMatrix4fv(getUniformLocationCached(program, "u_view"), false, m);

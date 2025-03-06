@@ -139,7 +139,7 @@ function draw(vbo, data, x, y, angle) {
         positions[6], positions[7], positions[8], texcoords[4], texcoords[5],
         positions[9], positions[10], positions[11], texcoords[6], texcoords[7]
     ]));
-    drawElements(6);
+    drawElements(0, 6);
 
 
 }
