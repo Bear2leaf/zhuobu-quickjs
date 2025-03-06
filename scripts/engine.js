@@ -160,7 +160,19 @@ export function init() {
 
 
 }
+let audioOn = true;
 export function fixedUpdate() {
+    if (audioOn) {
+        if (inputs.has(KeyInput.DisableAudio)) {
+            stopAudio(0);
+            audioOn = false;
+        }
+    } else {
+        if (inputs.has(KeyInput.EnableAudio)) {
+            playAudio(0, 1, true);
+            audioOn = true;
+        }
+    }
     const objs = mMovingPlatforms.concat([character]).concat(mObjects);
     for (const obj of objs) {
         switch (obj.mType) {
@@ -272,24 +284,21 @@ function update() {
     } else {
         inputs.delete(KeyInput.ScaleUp)
     }
-    if (getKey(keys.Mute)) {
-        inputs.add(KeyInput.ToggleMute);
-        toggleMute();
+    if (getKey(keys.M)) {
+        inputs.add(KeyInput.DisableAudio);
     } else {
-        inputs.delete(KeyInput.ToggleMute)
+        inputs.delete(KeyInput.DisableAudio)
     }
-}
-let justMuted = false;
-let muted = false;
-function toggleMute() {
-    if (muted && !justMuted) {
-        justMuted = true;
-        playAudio(0, 1, true);
+    if (getKey(keys.N)) {
+        inputs.add(KeyInput.EnableAudio);
     } else {
-        justMuted = false;
-        stopAudio(0);
+        inputs.delete(KeyInput.EnableAudio)
     }
-    muted = !muted;
+    if (getKey(keys.Backspace)) {
+        inputs.add(KeyInput.ScaleNormal);
+    } else {
+        inputs.delete(KeyInput.ScaleNormal)
+    }
 }
 export async function mainQuickjs() {
     keys = KeyCodeGLFW;

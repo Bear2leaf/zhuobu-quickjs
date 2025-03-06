@@ -43,9 +43,23 @@ export class Character extends MovingObject {
     }
     customUpdate() {
         if (this.keyState(KeyInput.ScaleUp)) {
-            this.scale = vec2.fromValues(2, 2);
+            if (!vec2.equals(this.scale, vec2.fromValues(2, 2))) {
+                const oldHeight = this.mAABB.halfSize[1];
+                this.scale = vec2.fromValues(2, 2);
+                this.mPosition[1] -= oldHeight - this.mAABB.halfSize[1];
+            }
         } else if (this.keyState(KeyInput.ScaleDown)) {
-            this.scale = vec2.fromValues(0.5, 0.5);
+            if (!vec2.equals(this.scale, vec2.fromValues(0.5, 0.5))) {
+                const oldHeight = this.mAABB.halfSize[1];
+                this.scale = vec2.fromValues(0.5, 0.5);
+                this.mPosition[1] -= oldHeight - this.mAABB.halfSize[1];
+            }
+        } else if (this.keyState(KeyInput.ScaleNormal)) {
+            if (!vec2.equals(this.scale, vec2.fromValues(1, 1))) {
+                const oldHeight = this.mAABB.halfSize[1];
+                this.scale = vec2.fromValues(1, 1);
+                this.mPosition[1] -= oldHeight - this.mAABB.halfSize[1];
+            }
         }
         switch (this.mCurrentState) {
             case CharacterState.Stand:
@@ -83,13 +97,13 @@ export class Character extends MovingObject {
                     else
                         this.mSpeed[0] = this.mWalkSpeed;
 
-                    this.scale[0] = -Math.abs(this.scale[0]);
+                    this.mScale[0] = -Math.abs(this.mScale[0]);
                 } else if (this.keyState(KeyInput.GoLeft)) {
                     if (this.mPS.pushesLeft)
                         this.mSpeed[0] = 0.0;
                     else
                         this.mSpeed[0] = -this.mWalkSpeed;
-                    this.scale[0] = Math.abs(this.scale[0]);
+                    this.mScale[0] = Math.abs(this.mScale[0]);
                 }
                 if (this.keyState(KeyInput.Jump)) {
                     this.jump();
@@ -125,13 +139,13 @@ export class Character extends MovingObject {
                         this.mSpeed[0] = 0.0;
                     else
                         this.mSpeed[0] = this.mWalkSpeed;
-                    this.scale[0] = -Math.abs(this.scale[0]);
+                    this.mScale[0] = -Math.abs(this.mScale[0]);
                 } else if (this.keyState(KeyInput.GoLeft)) {
                     if (this.mPS.pushesLeftTile)
                         this.mSpeed[0] = 0.0;
                     else
                         this.mSpeed[0] = -this.mWalkSpeed;
-                    this.scale[0] = Math.abs(this.scale[0]);
+                    this.mScale[0] = Math.abs(this.mScale[0]);
                 }
                 //if we hit the ground 
                 if (this.mPS.pushesBottom) {

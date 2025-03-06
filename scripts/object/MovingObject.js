@@ -761,9 +761,6 @@ export class MovingObject {
         }
         //update the aabb 
         vec2.copy(this.mAABB.center, this.mPosition);
-        if (this.mType == ObjectType.Player) {
-            console.log(this.mAllCollidingObjects.length)
-        }
     }
     /**
      * 
