@@ -204,43 +204,43 @@ export function render(alpha) {
     mat4.ortho(m, -getScreenWidth() / 2, getScreenWidth() / 2, -getScreenHeight() / 2, getScreenHeight() / 2, 1, -1);
     uniformMatrix4fv(getUniformLocationCached(program, "u_projection"), false, m);
     mat4.identity(m);
-    vec2.lerp(viewOffset, viewOffset, vec2.scale(vec2.create(), [character.position[0], character.position[1] + 100], zoom), 0.05);
-    vec2.scale(viewOffset, viewOffset, 1 / zoom);
-    vec2.round(viewOffset, viewOffset);
-    vec2.scale(viewOffset, viewOffset, zoom);
-    mat4.lookAt(m, [...viewOffset, 1], [...viewOffset, -1], [0, 1, 0]);
+    vec2.lerp(viewOffset, viewOffset, vec2.scale(vec2.create(), [character.position[0], character.position[1]], zoom), 0.1);
+    const rounded = vec2.round(vec2.create(), viewOffset);
+    mat4.lookAt(m, [...rounded, 1], [...rounded, -1], [0, 1, 0]);
     uniformMatrix4fv(getUniformLocationCached(program, "u_view"), false, m);
     mat4.identity(m)
     mat4.scale(m, m, [zoom, zoom, 1]);
     uniformMatrix4fv(getUniformLocationCached(program, "u_world"), false, m);
 
-    const model = mat4.identity(mat4.create());
-    uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, model);
+    mat4.identity(m);
+    uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, m);
     map.spriteRenderer.render();
 
     for (let i = 0; i < mMovingPlatforms.length; ++i) {
         const obj = mMovingPlatforms[i];
         obj.mAlpha = alpha;
-        const model = mat4.identity(mat4.create());
-        mat4.translate(model, model, [obj.position[0], obj.position[1], 0]);
-        mat4.scale(model, model, [obj.scale[0], obj.scale[1], 1]);
-        uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, model);
+        mat4.identity(m);
+        mat4.translate(m, m, [obj.position[0], obj.position[1], 0]);
+        mat4.scale(m, m, [obj.scale[0], obj.scale[1], 1]);
+        uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, m);
         obj.mSpriteRenderer.render();
     }
 
+    mat4.lookAt(m, [...viewOffset, 1], [...viewOffset, -1], [0, 1, 0]);
+    uniformMatrix4fv(getUniformLocationCached(program, "u_view"), false, m);
     const objects = [character].concat(mObjects);
     for (let i = 0; i < objects.length; ++i) {
         const obj = objects[i];
         obj.mAlpha = alpha;
-        const model = mat4.identity(mat4.create());
-        mat4.translate(model, model, [obj.position[0], obj.position[1], 0]);
-        mat4.scale(model, model, [obj.scale[0], obj.scale[1], 1]);
-        uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, model);
+        mat4.identity(m);
+        mat4.translate(m, m, [obj.position[0], obj.position[1], 0]);
+        mat4.scale(m, m, [obj.scale[0], obj.scale[1], 1]);
+        uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, m);
         obj.mSpriteRenderer.render();
     }
     {
-        const model = mat4.identity(mat4.create());
-        uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, model);
+        mat4.identity(m);
+        uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, m);
         atlasRenderer.render();
     }
     {

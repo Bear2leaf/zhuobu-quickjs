@@ -43,7 +43,7 @@ export class SpriteRenderer {
         this.textures = [atlas.texture];
         bindVAO(vao);
         bindVBO(vbo);
-        const rect = atlas.atlasData["atlas/tall/long"];
+        const rect = atlas.atlasData["atlas/platform/movingPlatform"];
         const u0 = rect.x;
         const v0 = rect.y;
         const u1 = rect.x + rect.width;
@@ -118,7 +118,7 @@ export class SpriteRenderer {
             throw new Error("Atlas not initialized");
         }
 
-        const rect = atlas.atlasData["atlas/platform/door"];
+        const rect = atlas.atlasData["atlas/platform/character"];
         const u0 = rect.x;
         const v0 = rect.y;
         const u1 = rect.x + rect.width;
@@ -165,7 +165,7 @@ export class SpriteRenderer {
         }
         this.textures = [atlas.texture];
         const blockRect = atlas.atlasData["atlas/platform/block"];
-        const onewayRect = atlas.atlasData["atlas/platform/small-platform"];
+        const onewayRect = atlas.atlasData["atlas/platform/slope45oneway"];
         const blocku0 = blockRect.x;
         const blockv0 = blockRect.y;
         const blocku1 = blockRect.x + blockRect.width;
@@ -196,10 +196,10 @@ export class SpriteRenderer {
                 const position = map.getMapTilePosition(j, i);
                 const tile = map.getCollisionType(j, i);
                 buffers.set([
-                    ...vec3.rotateZ(vec3.create(), [+cTileSize / 2 + position[0], +cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], Math.PI * 3 / 2), 1.0, 1.0, 1.0, ...(tile === TileCollisionType.Full ? blockuv[0] : tile === TileCollisionType.OneWaySlope45 ? onewayuv[0] : [0, 0]),
-                    ...vec3.rotateZ(vec3.create(), [+cTileSize / 2 + position[0], -cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], Math.PI * 3 / 2), 1.0, 1.0, 1.0, ...(tile === TileCollisionType.Full ? blockuv[1] : tile === TileCollisionType.OneWaySlope45 ? onewayuv[1] : [0, 0]),
-                    ...vec3.rotateZ(vec3.create(), [-cTileSize / 2 + position[0], -cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], Math.PI * 3 / 2), 1.0, 1.0, 1.0, ...(tile === TileCollisionType.Full ? blockuv[2] : tile === TileCollisionType.OneWaySlope45 ? onewayuv[2] : [0, 0]),
-                    ...vec3.rotateZ(vec3.create(), [-cTileSize / 2 + position[0], +cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], Math.PI * 3 / 2), 1.0, 1.0, 1.0, ...(tile === TileCollisionType.Full ? blockuv[3] : tile === TileCollisionType.OneWaySlope45 ? onewayuv[3] : [0, 0]),
+                    ...vec3.rotateZ(vec3.create(), [+cTileSize / 2 + position[0], +cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], tile === TileCollisionType.Full ? Math.PI : tile === TileCollisionType.OneWaySlope45 ? Math.PI * 3 / 2 : Math.PI), 1.0, 1.0, 1.0, ...(tile === TileCollisionType.Full ? blockuv[0] : tile === TileCollisionType.OneWaySlope45 ? onewayuv[0] : [0, 0]),
+                    ...vec3.rotateZ(vec3.create(), [+cTileSize / 2 + position[0], -cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], tile === TileCollisionType.Full ? Math.PI : tile === TileCollisionType.OneWaySlope45 ? Math.PI * 3 / 2 : Math.PI), 1.0, 1.0, 1.0, ...(tile === TileCollisionType.Full ? blockuv[1] : tile === TileCollisionType.OneWaySlope45 ? onewayuv[1] : [0, 0]),
+                    ...vec3.rotateZ(vec3.create(), [-cTileSize / 2 + position[0], -cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], tile === TileCollisionType.Full ? Math.PI : tile === TileCollisionType.OneWaySlope45 ? Math.PI * 3 / 2 : Math.PI), 1.0, 1.0, 1.0, ...(tile === TileCollisionType.Full ? blockuv[2] : tile === TileCollisionType.OneWaySlope45 ? onewayuv[2] : [0, 0]),
+                    ...vec3.rotateZ(vec3.create(), [-cTileSize / 2 + position[0], +cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], tile === TileCollisionType.Full ? Math.PI : tile === TileCollisionType.OneWaySlope45 ? Math.PI * 3 / 2 : Math.PI), 1.0, 1.0, 1.0, ...(tile === TileCollisionType.Full ? blockuv[3] : tile === TileCollisionType.OneWaySlope45 ? onewayuv[3] : [0, 0]),
                 ], (i * map.mWidth + j) * 4 * 8);
                 if (tile) {
                     indices.set([

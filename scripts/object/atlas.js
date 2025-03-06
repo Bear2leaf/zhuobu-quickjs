@@ -69,11 +69,11 @@ export async function loadAtlasShaderSource() {
 export async function addAtlas() {
 
     const urls = new Set([
-        "atlas/tall/long",
-        "atlas/platform/small-platform",
-        "atlas/platform/platform-long",
+        "atlas/platform/movingPlatform",
+        "atlas/platform/slope45oneway",
+        "atlas/platform/movingPlatform",
         "atlas/platform/block",
-        "atlas/platform/door",
+        "atlas/platform/character",
     ]);
     for (const name of urls) {
         imageCache.set(name, { ...await loadImage(`resources/${name}.png`), name });

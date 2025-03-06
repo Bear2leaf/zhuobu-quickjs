@@ -97,13 +97,13 @@ export class Character extends MovingObject {
                     else
                         this.mSpeed[0] = this.mWalkSpeed;
 
-                    this.mScale[0] = -Math.abs(this.mScale[0]);
+                    this.mScale[0] = Math.abs(this.mScale[0]);
                 } else if (this.keyState(KeyInput.GoLeft)) {
                     if (this.mPS.pushesLeft)
                         this.mSpeed[0] = 0.0;
                     else
                         this.mSpeed[0] = -this.mWalkSpeed;
-                    this.mScale[0] = Math.abs(this.mScale[0]);
+                    this.mScale[0] = -Math.abs(this.mScale[0]);
                 }
                 if (this.keyState(KeyInput.Jump)) {
                     this.jump();
@@ -139,13 +139,13 @@ export class Character extends MovingObject {
                         this.mSpeed[0] = 0.0;
                     else
                         this.mSpeed[0] = this.mWalkSpeed;
-                    this.mScale[0] = -Math.abs(this.mScale[0]);
+                    this.mScale[0] = Math.abs(this.mScale[0]);
                 } else if (this.keyState(KeyInput.GoLeft)) {
                     if (this.mPS.pushesLeftTile)
                         this.mSpeed[0] = 0.0;
                     else
                         this.mSpeed[0] = -this.mWalkSpeed;
-                    this.mScale[0] = Math.abs(this.mScale[0]);
+                    this.mScale[0] = -Math.abs(this.mScale[0]);
                 }
                 //if we hit the ground 
                 if (this.mPS.pushesBottom) {
