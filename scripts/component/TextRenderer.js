@@ -130,7 +130,7 @@ export class TextRenderer {
             uniform1i(getUniformLocationCached(program, `u_texture${index}`), index);
         }
         if (this.count) {
-            drawElements(this.count);
+            drawElements(0, this.count);
         }
     }
 }

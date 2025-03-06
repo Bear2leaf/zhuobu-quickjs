@@ -5,7 +5,7 @@ import { TileCollisionType } from "../misc/enums.js";
 import { CollisionData } from "./CollisionData.js";
 import { MovingObject } from "./MovingObject.js";
 const mw = 80;
-const mh = 60;
+const mh = 50;
 const collisionsData = Object.freeze(new Array(mw * mh).fill(TileCollisionType.Empty).map((tile, index) => {
     // add border
     if (index % mw === 0 || index % mw === mw - 1 || Math.floor(index / mw) === 0 || Math.floor(index / mw) === mh - 1) {

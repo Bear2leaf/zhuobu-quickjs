@@ -1,7 +1,7 @@
 import { SpriteRenderer } from "./component/SpriteRenderer.js";
 import { TextRenderer } from "./component/TextRenderer.js";
 import { clear, clearColor, createShaderProgram, getKey, getScreenHeight, getScreenWidth, getTime, getUniformLocation, initContext, loadAudio, loadImage, loadText, mat4, playAudio, pollEvents, resize, shouldCloseWindow, stopAudio, swapBuffers, terminate, uniformMatrix4fv, useProgram, vec2 } from "./libs.js";
-import { FPS, zoom } from "./misc/constants.js";
+import { cTileSize, FPS, zoom } from "./misc/constants.js";
 import { KeyCode, KeyCodeGLFW, KeyInput, ObjectType } from "./misc/enums.js";
 import { buildAtlas, addAtlas as loadAtlasImages, loadAtlasShaderSource } from "./object/atlas.js";
 import { Character } from "./object/Character.js";
@@ -205,6 +205,7 @@ export function render(alpha) {
     uniformMatrix4fv(getUniformLocationCached(program, "u_projection"), false, m);
     mat4.identity(m);
     vec2.lerp(viewOffset, viewOffset, vec2.scale(vec2.create(), [character.position[0], character.position[1]], zoom), 0.05);
+    clampViewOffset(viewOffset);
     const rounded = vec2.round(vec2.create(), viewOffset);
     mat4.lookAt(m, [...rounded, 1], [...rounded, -1], [0, 1, 0]);
     uniformMatrix4fv(getUniformLocationCached(program, "u_view"), false, m);
@@ -247,7 +248,21 @@ export function render(alpha) {
         textRenderer.render();
     }
 }
+/**
+ * 
+ * @param {vec2} viewOffset 
+ */
+function clampViewOffset(viewOffset) {
+    const mapTop = (getScreenHeight() - cTileSize) / 2;
+    const mapLeft = (getScreenWidth() - cTileSize) / 2;
+    const mapRight = map.mWidth * cTileSize - (getScreenWidth() + cTileSize) / 2;
+    const mapBottom = map.mHeight * cTileSize - (getScreenHeight() + cTileSize) / 2;
+    const x = Math.min(mapRight, Math.max(mapLeft, viewOffset[0]));
+    const y = Math.min(mapBottom, Math.max(mapTop, viewOffset[1]));
+    viewOffset[0] = x;
+    viewOffset[1] = y;
 
+}
 /**
  * @type {typeof KeyCodeGLFW | typeof KeyCode}
  */

@@ -161,7 +161,7 @@ export class SpriteRenderer {
         bufferData(buffer);
         bindEBO(ebo);
         bufferDataElement(indices);
-        this.offset = 0;
+        this.offset = Math.floor(Math.random() * maxFrames);
         setVertexAttributePointer(0, 3, false, 8, 0);
         enableVertexAttribute(0);
         setVertexAttributePointer(1, 3, false, 8, 3);
