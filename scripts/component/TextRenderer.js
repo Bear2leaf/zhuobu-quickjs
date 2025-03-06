@@ -25,6 +25,8 @@ export class TextRenderer {
         /** @type {WebGLTexture[]} */
         this.textures = [];
         this.program = "text"
+        this.status = "init";
+        this.message = "Hello World";
     }
     /**
      * 
@@ -75,11 +77,7 @@ export class TextRenderer {
         enableVertexAttribute(1);
         this.count = indices.length;
     }
-    /**
-     * 
-     * @param {string} text 
-     */
-    updateText(text) {
+    updateText() {
         const { vao, vboPositions, vboTexcoords, ebo, program, textures, font } = this;
         if (!font) {
             throw new Error("Font not initialized");
@@ -96,7 +94,7 @@ export class TextRenderer {
         if (!vboTexcoords) {
             throw new Error("VBO not initialized");
         }
-        const mtsdfText = cacheMTSDFText(text, font, 24, "left", Infinity);
+        const mtsdfText = cacheMTSDFText([this.status, this.message].join("\n"), font, 24, "left", Infinity);
         const positions = mtsdfText.buffers.position;
         const texcoords = mtsdfText.buffers.uv;
         const indices = mtsdfText.buffers.index;

@@ -192,6 +192,22 @@ export function fixedUpdate() {
         element.updatePhysicsP2();
         element.tickPosition();
     }
+    const collisions = character.mAllCollidingObjects;
+    textRenderer.message = `Collisions: ${collisions.length}\n${collectCollisions()}`;
+    textRenderer.updateText();
+}
+function collectCollisions() {
+    const collisions = character.mAllCollidingObjects;
+    /** @type {Record<string, number>} */
+    const info = {};
+    for (const collision of collisions) {
+        const type = Object.keys(ObjectType)[collision.other.mType];
+        if (info[type] === undefined) {
+            info[type] = 0;
+        }
+        info[type]++;
+    }
+    return Object.keys(info).map((key) => `${key}: ${info[key]}`).join("\n");
 }
 const viewOffset = vec2.fromValues(0, 0);
 /** @param {number} alpha  */
@@ -344,7 +360,8 @@ export async function mainQuickjs() {
         if (getTime() - timer > 1.0) {
             timer++;
             const msg = `FPS: ${frames} Updates: ${updates}`;
-            textRenderer.updateText(msg);
+            textRenderer.status = (msg);
+            textRenderer.updateText();
             updates = 0, frames = 0;
         }
     }
@@ -377,7 +394,8 @@ export async function main() {
         if (getTime() - timer > 1.0) {
             timer++;
             const msg = `FPS: ${frames} Updates: ${updates}`;
-            textRenderer.updateText(msg);
+            textRenderer.status = (msg);
+            textRenderer.updateText();
             updates = 0, frames = 0;
         }
         requestAnimationFrame(loop);
