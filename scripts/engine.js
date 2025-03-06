@@ -272,6 +272,24 @@ function update() {
     } else {
         inputs.delete(KeyInput.ScaleUp)
     }
+    if (getKey(keys.Mute)) {
+        inputs.add(KeyInput.ToggleMute);
+        toggleMute();
+    } else {
+        inputs.delete(KeyInput.ToggleMute)
+    }
+}
+let justMuted = false;
+let muted = false;
+function toggleMute() {
+    if (muted && !justMuted) {
+        justMuted = true;
+        playAudio(0, 1, true);
+    } else {
+        justMuted = false;
+        stopAudio(0);
+    }
+    muted = !muted;
 }
 export async function mainQuickjs() {
     keys = KeyCodeGLFW;

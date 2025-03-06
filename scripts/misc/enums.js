@@ -10,7 +10,8 @@ export const KeyInput = Object.freeze({
     GoDown: 2,
     Jump: 3,
     ScaleDown: 4,
-    ScaleUp: 5
+    ScaleUp: 5,
+    ToggleMute: 6,
 });
 export const KeyCode = Object.freeze({
 
@@ -19,7 +20,8 @@ export const KeyCode = Object.freeze({
     DownKey: 40,
     JumpKey: 32,
     Minus: 189,
-    Equal: 187
+    Equal: 187,
+    Mute: 77,
 })
 
 export const KeyCodeGLFW = Object.freeze({
@@ -28,7 +30,8 @@ export const KeyCodeGLFW = Object.freeze({
     DownKey: 264,
     JumpKey: 32,
     Minus: 45,
-    Equal: 61
+    Equal: 61,
+    Mute: 77,
 })
 export const ObjectType = Object.freeze({
     None: 0,

@@ -466,6 +466,8 @@ export function initContext() {
                     keyset.delete(37);
                     keyset.delete(40);
                     keyset.delete(32);
+                } else {
+                    keyset.delete(77);
                 }
             }
         });
@@ -488,16 +490,18 @@ export function initContext() {
                         keyset.delete(39);
                         keyset.delete(37);
                     }
-                    if (pointer.y - e.pageY < -50) {
+                    if (pointer.y - e.pageY < -100) {
                         keyset.add(40);
                         keyset.delete(32);
-                    } else if (pointer.y - e.pageY > 50) {
+                    } else if (pointer.y - e.pageY > 100) {
                         keyset.add(32);
                         keyset.delete(40);
                     } else {
                         keyset.delete(40);
                         keyset.delete(32);
                     }
+                } else {
+                    keyset.add(77);
                 }
             }
         });
