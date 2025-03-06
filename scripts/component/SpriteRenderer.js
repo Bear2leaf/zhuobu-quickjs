@@ -1,11 +1,8 @@
 import { getProgram, getUniformLocationCached } from "../engine.js";
-import { createVAO, createBuffer, bindVAO, bindVBO, bufferData, bindEBO, bufferDataElement, setVertexAttributePointer, enableVertexAttribute, activeTexture, bindTexture, drawElements, mat4, uniform1f, uniform1i, uniformMatrix4fv, useProgram, createTexture, updateTexture, vec2, vec3 } from "../libs.js";
+import { activeTexture, bindEBO, bindTexture, bindVAO, bindVBO, bufferData, bufferDataElement, createBuffer, createTexture, createVAO, drawElements, enableVertexAttribute, setVertexAttributePointer, uniform1f, uniform1i, updateTexture, useProgram, vec3 } from "../libs.js";
 import { cHalfSizeX, cHalfSizeY, cTileSize } from "../misc/constants.js";
-import { TileType } from "../misc/enums.js";
-import { Character } from "../object/Character.js";
+import { TileCollisionType } from "../misc/enums.js";
 import { Map as GameMap } from "../object/Map.js";
-import { MovingObject } from "../object/MovingObject.js";
-import { MovingPlatform } from "../object/MovingPlatform.js";
 
 
 export class SpriteRenderer {
@@ -197,12 +194,12 @@ export class SpriteRenderer {
         for (let i = 0; i < map.mHeight; i++) {
             for (let j = 0; j < map.mWidth; j++) {
                 const position = map.getMapTilePosition(j, i);
-                const tile = map.mTiles[i * map.mWidth + j];
+                const tile = map.getCollisionType(j, i);
                 buffers.set([
-                    ...vec3.rotateZ(vec3.create(), [+cTileSize / 2 + position[0], +cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], Math.PI * 3 / 2), 1.0, 1.0, 1.0, ...(tile === TileType.Block ? blockuv[0] : tile === TileType.OneWay ? onewayuv[0] : [0, 0]),
-                    ...vec3.rotateZ(vec3.create(), [+cTileSize / 2 + position[0], -cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], Math.PI * 3 / 2), 1.0, 1.0, 1.0, ...(tile === TileType.Block ? blockuv[1] : tile === TileType.OneWay ? onewayuv[1] : [0, 0]),
-                    ...vec3.rotateZ(vec3.create(), [-cTileSize / 2 + position[0], -cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], Math.PI * 3 / 2), 1.0, 1.0, 1.0, ...(tile === TileType.Block ? blockuv[2] : tile === TileType.OneWay ? onewayuv[2] : [0, 0]),
-                    ...vec3.rotateZ(vec3.create(), [-cTileSize / 2 + position[0], +cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], Math.PI * 3 / 2), 1.0, 1.0, 1.0, ...(tile === TileType.Block ? blockuv[3] : tile === TileType.OneWay ? onewayuv[3] : [0, 0]),
+                    ...vec3.rotateZ(vec3.create(), [+cTileSize / 2 + position[0], +cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], Math.PI * 3 / 2), 1.0, 1.0, 1.0, ...(tile === TileCollisionType.Full ? blockuv[0] : tile === TileCollisionType.OneWaySlope45 ? onewayuv[0] : [0, 0]),
+                    ...vec3.rotateZ(vec3.create(), [+cTileSize / 2 + position[0], -cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], Math.PI * 3 / 2), 1.0, 1.0, 1.0, ...(tile === TileCollisionType.Full ? blockuv[1] : tile === TileCollisionType.OneWaySlope45 ? onewayuv[1] : [0, 0]),
+                    ...vec3.rotateZ(vec3.create(), [-cTileSize / 2 + position[0], -cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], Math.PI * 3 / 2), 1.0, 1.0, 1.0, ...(tile === TileCollisionType.Full ? blockuv[2] : tile === TileCollisionType.OneWaySlope45 ? onewayuv[2] : [0, 0]),
+                    ...vec3.rotateZ(vec3.create(), [-cTileSize / 2 + position[0], +cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], Math.PI * 3 / 2), 1.0, 1.0, 1.0, ...(tile === TileCollisionType.Full ? blockuv[3] : tile === TileCollisionType.OneWaySlope45 ? onewayuv[3] : [0, 0]),
                 ], (i * map.mWidth + j) * 4 * 8);
                 if (tile) {
                     indices.set([

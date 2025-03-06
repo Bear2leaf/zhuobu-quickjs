@@ -41,11 +41,6 @@ export const ObjectType = Object.freeze({
 })
 
 
-export const TileType = Object.freeze({
-    Empty: 0,
-    Block: 1,
-    OneWay: 2,
-})
 
 export const TileCollisionType = Object.freeze({
     Empty: 0,

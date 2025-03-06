@@ -1,39 +1,25 @@
 import { SpriteRenderer } from "../component/SpriteRenderer.js";
 import { vec2, vec3 } from "../libs.js";
 import { cTileSize } from "../misc/constants.js";
-import { ObjectType, TileCollisionType, TileType } from "../misc/enums.js";
+import { TileCollisionType } from "../misc/enums.js";
 import { CollisionData } from "./CollisionData.js";
 import { MovingObject } from "./MovingObject.js";
 const mw = 80;
 const mh = 60;
-/**
- * @type {Readonly<EnumValue<typeof TileType>[]>}
- */
-const mapData = Object.freeze(new Array(mw * mh).fill(TileType.Empty).map((tile, index) => {
-
+const collisionsData = Object.freeze(Object.freeze(new Array(mw * mh).fill(TileCollisionType.Empty).map((tile, index) => {
     // add border
     if (index % mw === 0 || index % mw === mw - 1 || Math.floor(index / mw) === 0 || Math.floor(index / mw) === mh - 1) {
-        return TileType.Block;
+        return TileCollisionType.Full;
     }
     if (Math.floor(index / mw) < 5) {
-        return TileType.Block;
-    } else if (Math.floor(index / mw) < 30) {
-        return Math.random() < 0.02 ? TileType.Block : Math.random() < 0.02 ? TileType.OneWay : TileType.Empty;
-    }
-    return TileType.Empty;
-}));
-const collisionsData = Object.freeze(mapData.map((tile) => {
-    if (tile === TileType.Block) {
         return TileCollisionType.Full;
-    } else if (tile === TileType.OneWay) {
-        return TileCollisionType.OneWaySlope45;
+    } else if (Math.floor(index / mw) < 30) {
+        return Math.random() < 0.02 ? TileCollisionType.Full : Math.random() < 0.02 ? TileCollisionType.OneWaySlope45 : TileCollisionType.Empty;
     }
     return TileCollisionType.Empty;
-}));
+})));
 export class Map {
     constructor() {
-        /** @type {Readonly<EnumValue<typeof TileType>[]>} */
-        this.mTiles = mapData;
         this.spriteRenderer = new SpriteRenderer();
         this.mPosition = vec3.create();
         this.mWidth = mw;
@@ -213,63 +199,13 @@ export class Map {
      * 
      * @param {number} x 
      * @param {number} y 
-     * @returns {EnumValue<TileType>}
-     */
-    getTile(x, y) {
-        if (x < 0 || x >= this.mWidth || y < 0 || y >= this.mHeight) {
-            return TileType.Block;
-        }
-        return this.mTiles[y * this.mWidth + x];
-    }
-
-    /**
-     * 
-     * @param {number} x 
-     * @param {number} y 
      * @returns {boolean}
      */
     isObstacle(x, y) {
         if (x < 0 || x >= this.mWidth || y < 0 || y >= this.mHeight) {
             return true;
         }
-        return this.mTiles[y * this.mWidth + x] === TileType.Block;
-    }
-    /**
-     * 
-     * @param {number} x 
-     * @param {number} y 
-     * @returns {boolean}
-     */
-    isGround(x, y) {
-        if (x < 0 || x >= this.mWidth || y < 0 || y >= this.mHeight) {
-            return false;
-        }
-        return this.mTiles[y * this.mWidth + x] === TileType.OneWay || this.mTiles[y * this.mWidth + x] === TileType.Block;
-    }
-
-    /**
-     * 
-     * @param {number} x 
-     * @param {number} y 
-     * @returns {boolean}
-     */
-    isOneWayPlatform(x, y) {
-        if (x < 0 || x >= this.mWidth || y < 0 || y >= this.mHeight) {
-            return false;
-        }
-        return this.mTiles[y * this.mWidth + x] === TileType.OneWay;
-    }
-    /** 
-     * 
-     * @param {number} x 
-     * @param {number} y 
-     * @returns {boolean}
-     */
-    isEmpty(x, y) {
-        if (x < 0 || x >= this.mWidth || y < 0 || y >= this.mHeight) {
-            return false;
-        }
-        return this.mTiles[y * this.mWidth + x] === TileType.Empty;
+        return this.mTilesCollision[y * this.mWidth + x] === TileCollisionType.Full;
     }
     /**
      * 
