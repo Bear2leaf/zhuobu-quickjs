@@ -6,7 +6,7 @@ import { CollisionData } from "./CollisionData.js";
 import { MovingObject } from "./MovingObject.js";
 const mw = 80;
 const mh = 60;
-const collisionsData = Object.freeze(Object.freeze(new Array(mw * mh).fill(TileCollisionType.Empty).map((tile, index) => {
+const collisionsData = Object.freeze(new Array(mw * mh).fill(TileCollisionType.Empty).map((tile, index) => {
     // add border
     if (index % mw === 0 || index % mw === mw - 1 || Math.floor(index / mw) === 0 || Math.floor(index / mw) === mh - 1) {
         return TileCollisionType.Full;
@@ -17,7 +17,7 @@ const collisionsData = Object.freeze(Object.freeze(new Array(mw * mh).fill(TileC
         return Math.random() < 0.02 ? TileCollisionType.Full : Math.random() < 0.02 ? TileCollisionType.OneWaySlope45 : TileCollisionType.Empty;
     }
     return TileCollisionType.Empty;
-})));
+}));
 export class Map {
     constructor() {
         this.spriteRenderer = new SpriteRenderer();

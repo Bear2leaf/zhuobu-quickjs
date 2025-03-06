@@ -54,7 +54,6 @@ export class MovingObject {
         this.mAllCollidingObjects = [];
 
 
-        this.mIsKinematic = false;
 
         this.mIgnoresOneWay = false;
         this.mOnOneWayPlatform = false;
@@ -584,6 +583,8 @@ export class MovingObject {
         this.mPS.pushesTopObject = false;
         const offsetSum = vec2.create();
         for (let i = 0; i < this.mAllCollidingObjects.length; ++i) {
+            if ((this.mType == ObjectType.Player && this.mAllCollidingObjects[i].other.mType == ObjectType.NPC) || this.mType === ObjectType.NPC)
+                continue;
             const other = this.mAllCollidingObjects[i].other;
             const data = this.mAllCollidingObjects[i];
             const overlap = vec2.sub(vec2.create(), data.overlap, offsetSum);
@@ -760,6 +761,9 @@ export class MovingObject {
         }
         //update the aabb 
         vec2.copy(this.mAABB.center, this.mPosition);
+        if (this.mType == ObjectType.Player) {
+            console.log(this.mAllCollidingObjects.length)
+        }
     }
     /**
      * 
