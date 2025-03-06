@@ -54,6 +54,7 @@ static JSValue js_loadImage(JSContext* ctx,
     JSValueConst* argv) {
     const char* filename = JS_ToCString(ctx, argv[0]);
     int width, height, nrChannels;
+    stbi_set_flip_vertically_on_load(1); // tell stb_image.h to flip loaded texture's on the y-axis.
     unsigned char* data = stbi_load(filename, &width, &height, &nrChannels, 0);
     if (!data) {
         return JS_EXCEPTION;
