@@ -241,6 +241,7 @@ export function render(alpha) {
     }
     {
         mat4.identity(m);
+        mat4.translate(m, m, [100, getScreenHeight() - 128, 0]);
         uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, m);
         atlasRenderer.render();
     }

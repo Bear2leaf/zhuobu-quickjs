@@ -661,7 +661,6 @@ export function createFramebuffer(width, height) {
 export function beginFramebuffer(framebuffer) {
     const { gl } = context;
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer.fbo);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
     gl.viewport(0, 0, framebuffer.width, framebuffer.height);
     gl.scissor(0, 0, framebuffer.width, framebuffer.height);
 }

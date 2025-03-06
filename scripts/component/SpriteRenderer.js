@@ -62,10 +62,10 @@ export class SpriteRenderer {
         bindVAO(vao);
         bindVBO(vbo);
         bufferData(new Float32Array([
-            ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [0.5, 0.5, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [64, -16, 1]), 1.0, 1.0, 1.0, ...uv[0],
-            ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [0.5, -0.5, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [64, -16, 1]), 1.0, 1.0, 1.0, ...uv[1],
-            ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [-0.5, -0.5, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [64, -16, 1]), 1.0, 1.0, 1.0, ...uv[2],
-            ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [-0.5, 0.5, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [64, -16, 1]), 1.0, 1.0, 1.0, ...uv[3],
+            ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [0.5, 0.5, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [64, 16, 1]), 1.0, 1.0, 1.0, ...uv[0],
+            ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [0.5, -0.5, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [64, 16, 1]), 1.0, 1.0, 1.0, ...uv[1],
+            ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [-0.5, -0.5, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [64, 16, 1]), 1.0, 1.0, 1.0, ...uv[2],
+            ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [-0.5, 0.5, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [64, 16, 1]), 1.0, 1.0, 1.0, ...uv[3],
         ]));
         bindEBO(ebo);
         bufferDataElement(new Uint32Array([
@@ -138,10 +138,10 @@ export class SpriteRenderer {
         const indices = new Uint32Array(6 * maxFrames);
         for (let i = 0; i < maxFrames; i++) {
             buffer.set([
-                ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [cHalfSizeX, cHalfSizeY, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [1, -1, 1]), 1.0, 1.0, 1.0, ...uv[0],
-                ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [cHalfSizeX, -cHalfSizeY, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [1, -1, 1]), 1.0, 1.0, 1.0, ...uv[1],
-                ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [-cHalfSizeX, -cHalfSizeY, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [1, -1, 1]), 1.0, 1.0, 1.0, ...uv[2],
-                ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [-cHalfSizeX, cHalfSizeY, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [1, -1, 1]), 1.0, 1.0, 1.0, ...uv[3],
+                ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [cHalfSizeX, cHalfSizeY, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [1, 1, 1]), 1.0, 1.0, 1.0, ...uv[0],
+                ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [cHalfSizeX, -cHalfSizeY, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [1, 1, 1]), 1.0, 1.0, 1.0, ...uv[1],
+                ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [-cHalfSizeX, -cHalfSizeY, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [1, 1, 1]), 1.0, 1.0, 1.0, ...uv[2],
+                ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [-cHalfSizeX, cHalfSizeY, 0.0], [0, 0, 0], rect.rotated ? Math.PI / 2 : 0), [1, 1, 1]), 1.0, 1.0, 1.0, ...uv[3],
             ], i * 8 * 4);
             vec2.add(uv[0], uv[0], [(cHalfSizeX * 2) / atlas.atlasSize, 0])
             vec2.add(uv[1], uv[1], [(cHalfSizeX * 2) / atlas.atlasSize, 0])
@@ -214,10 +214,10 @@ export class SpriteRenderer {
                 const position = map.getMapTilePosition(j, i);
                 const tile = map.getCollisionType(j, i);
                 buffers.set([
-                    ...vec3.rotateZ(vec3.create(), [+cTileSize / 2 + position[0], +cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], tile === TileCollisionType.Full ? Math.PI : tile === TileCollisionType.OneWaySlope45 ? Math.PI * 3 / 2 : Math.PI), 1.0, 1.0, 1.0, ...(tile === TileCollisionType.Full ? blockuv[0] : tile === TileCollisionType.OneWaySlope45 ? onewayuv[0] : [0, 0]),
-                    ...vec3.rotateZ(vec3.create(), [+cTileSize / 2 + position[0], -cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], tile === TileCollisionType.Full ? Math.PI : tile === TileCollisionType.OneWaySlope45 ? Math.PI * 3 / 2 : Math.PI), 1.0, 1.0, 1.0, ...(tile === TileCollisionType.Full ? blockuv[1] : tile === TileCollisionType.OneWaySlope45 ? onewayuv[1] : [0, 0]),
-                    ...vec3.rotateZ(vec3.create(), [-cTileSize / 2 + position[0], -cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], tile === TileCollisionType.Full ? Math.PI : tile === TileCollisionType.OneWaySlope45 ? Math.PI * 3 / 2 : Math.PI), 1.0, 1.0, 1.0, ...(tile === TileCollisionType.Full ? blockuv[2] : tile === TileCollisionType.OneWaySlope45 ? onewayuv[2] : [0, 0]),
-                    ...vec3.rotateZ(vec3.create(), [-cTileSize / 2 + position[0], +cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], tile === TileCollisionType.Full ? Math.PI : tile === TileCollisionType.OneWaySlope45 ? Math.PI * 3 / 2 : Math.PI), 1.0, 1.0, 1.0, ...(tile === TileCollisionType.Full ? blockuv[3] : tile === TileCollisionType.OneWaySlope45 ? onewayuv[3] : [0, 0]),
+                    ...vec3.rotateZ(vec3.create(), [+cTileSize / 2 + position[0], +cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], 0), 1.0, 1.0, 1.0, ...(tile === TileCollisionType.Full ? blockuv[0] : tile === TileCollisionType.OneWaySlope45 ? onewayuv[0] : [0, 0]),
+                    ...vec3.rotateZ(vec3.create(), [+cTileSize / 2 + position[0], -cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], 0), 1.0, 1.0, 1.0, ...(tile === TileCollisionType.Full ? blockuv[1] : tile === TileCollisionType.OneWaySlope45 ? onewayuv[1] : [0, 0]),
+                    ...vec3.rotateZ(vec3.create(), [-cTileSize / 2 + position[0], -cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], 0), 1.0, 1.0, 1.0, ...(tile === TileCollisionType.Full ? blockuv[2] : tile === TileCollisionType.OneWaySlope45 ? onewayuv[2] : [0, 0]),
+                    ...vec3.rotateZ(vec3.create(), [-cTileSize / 2 + position[0], +cTileSize / 2 + position[1], 0.0], [position[0], position[1], 0], 0), 1.0, 1.0, 1.0, ...(tile === TileCollisionType.Full ? blockuv[3] : tile === TileCollisionType.OneWaySlope45 ? onewayuv[3] : [0, 0]),
                 ], (i * map.mWidth + j) * 4 * 8);
                 if (tile) {
                     indices.set([
