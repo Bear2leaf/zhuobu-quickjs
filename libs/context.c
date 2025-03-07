@@ -44,7 +44,10 @@ GLFWwindow* window;
 
 
 static JSValue js_resize() {
-    glViewport(0, 0, width, height);
+    float scaleX;
+    float scaleY;
+    glfwGetWindowContentScale(window, &scaleX, &scaleY);
+    glViewport(0, 0, width * scaleX, height * scaleY);
     return JS_UNDEFINED;
 }
 
@@ -444,21 +447,6 @@ static JSValue js_clear(JSContext* ctx,
     return JS_UNDEFINED;
 }
 
-static JSValue js_viewport(JSContext* ctx,
-    JSValueConst this_val,
-    int argc,
-    JSValueConst* argv) {
-    int x;
-    int y;
-    int width;
-    int height;
-    JS_ToInt32(ctx, &x, argv[0]);
-    JS_ToInt32(ctx, &y, argv[1]);
-    JS_ToInt32(ctx, &width, argv[2]);
-    JS_ToInt32(ctx, &height, argv[3]);
-    glViewport(x, y, width, height);
-    return JS_UNDEFINED;
-}
 
 
 ma_engine* pEngine;
@@ -731,7 +719,6 @@ static const JSCFunctionListEntry js_context_funcs[] = {
     JS_CFUNC_DEF("clear", 0, js_clear),
     JS_CFUNC_DEF("getScreenWidth", 0, js_getScreenWidth),
     JS_CFUNC_DEF("getScreenHeight", 0, js_getScreenHeight),
-    JS_CFUNC_DEF("viewport", 4, js_viewport),
     JS_CFUNC_DEF("shouldCloseWindow", 1, js_shouldCloseWindow),
     JS_CFUNC_DEF("swapBuffers", 1, js_swapBuffers),
     JS_CFUNC_DEF("pollEvents", 0, js_pollEvents),

@@ -175,6 +175,7 @@ declare function requestAnimationFrame(cb: () => void): void
 declare var window: {
   innerWidth: number
   innerHeight: number
+  devicePixelRatio: number
 }
 
 declare module "polyline-normals" {

@@ -346,18 +346,6 @@ export function clearColor(r, g, b, a) {
     context.gl.clearColor(r, g, b, a);
 }
 
-/**
- * Set the viewport.
- * @param {number} x - The lower left corner of the viewport rectangle, in pixels.
- * @param {number} y - The lower left corner of the viewport rectangle, in pixels.
- * @param {number} width - The width of the viewport.
- * @param {number} height - The height of the viewport.
- */
-export function viewport(x, y, width, height) {
-    // Implementation of viewport
-    context.gl.viewport(x, y, width, height);
-
-}
 
 /**
  * Check if the window should close.
@@ -420,9 +408,10 @@ export function initContext() {
         throw new Error("WebGL2 is not supported");
     }
     context.gl = gl;
-    gl.canvas.width = getScreenWidth();
-    gl.canvas.height = getScreenHeight();
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    const scale = window.devicePixelRatio;
+    gl.canvas.width = getScreenWidth() * scale;
+    gl.canvas.height = getScreenHeight() * scale;
+    gl.viewport(0, 0, gl.canvas.width / scale, gl.canvas.height / scale);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
@@ -565,8 +554,9 @@ export function resize() {
     const gl = context.gl;
     const canvas = gl.canvas;
     if (canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        const scale = window.devicePixelRatio;
+        gl.canvas.width = getScreenWidth() * scale;
+        gl.canvas.height = getScreenHeight() * scale;
         gl.viewport(0, 0, canvas.width, canvas.height);
     }
 }
