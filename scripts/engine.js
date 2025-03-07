@@ -1,6 +1,6 @@
 import { SpriteRenderer } from "./component/SpriteRenderer.js";
 import { TextRenderer } from "./component/TextRenderer.js";
-import { clear, clearColor, createShaderProgram, getKey, getScreenHeight, getScreenWidth, getTime, getUniformLocation, initContext, loadAudio, loadImage, loadText, mat4, playAudio, pollEvents, resize, shouldCloseWindow, stopAudio, swapBuffers, terminate, uniformMatrix4fv, useProgram, vec2 } from "./libs.js";
+import { clear, clearColor, createShaderProgram, getKey, getScreenHeight, getScreenWidth, getTime, getUniformLocation, initContext, loadAudio, loadImage, loadText, mat4, playAudio, pollEvents, resize, shouldCloseWindow, stopAudio, ink, swapBuffers, terminate, uniformMatrix4fv, useProgram, vec2 } from "./libs.js";
 import { cTileSize, FPS, zoom } from "./misc/constants.js";
 import { KeyCode, KeyCodeGLFW, KeyInput, ObjectType } from "./misc/enums.js";
 import { buildAtlas, addAtlas as loadAtlasImages, loadAtlasShaderSource } from "./object/atlas.js";
@@ -11,7 +11,7 @@ import { MovingPlatform } from "./object/MovingPlatform.js";
 import { Slopes } from "./object/Slopes.js";
 
 
-
+let storySource = "";
 /** @type {string}*/
 let fontSource;
 /** @type {string}*/
@@ -76,6 +76,7 @@ export function getProgram(name) {
 
 
 export async function load() {
+    storySource = await loadText("resources/story/story.txt");
     vertexShaderSource = await loadText("resources/glsl/sprite.vert.sk");
     fragmentShaderSource = await loadText("resources/glsl/sprite.frag.sk");
     textVertexShaderSource = await loadText("resources/glsl/text.vert.sk");
@@ -100,6 +101,9 @@ const textRenderer = new TextRenderer();
 export function init() {
     initContext();
     playAudio(0, 1, true);
+    const compiler = new ink.Compiler(storySource);
+    const story = compiler.Compile();
+    console.log(story.Continue());
     const atlas = buildAtlas();
     atlasRenderer.setAtlas(atlas);
     atlasRenderer.initQuad(0, 0, atlas.atlasSize, atlas.atlasSize);

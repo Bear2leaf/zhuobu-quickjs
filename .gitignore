@@ -16,3 +16,5 @@ quickjs/repl.c
 quickjs/run-test262
 quickjs/examples/hello
 quickjs/examples/hello_module
+libs/inkjs/compiler
+libs/inkjs/engine
