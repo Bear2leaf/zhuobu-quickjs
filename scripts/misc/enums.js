@@ -14,9 +14,11 @@ export const KeyInput = Object.freeze({
     DisableAudio: 6,
     ScaleNormal: 7,
     EnableAudio: 8,
+    Up: 9,
 });
 export const KeyCode = Object.freeze({
 
+    UpKey: 38,
     RightKey: 39,
     LeftKey: 37,
     DownKey: 40,
@@ -29,6 +31,7 @@ export const KeyCode = Object.freeze({
 })
 
 export const KeyCodeGLFW = Object.freeze({
+    UpKey: 265,
     RightKey: 262,
     LeftKey: 263,
     DownKey: 264,

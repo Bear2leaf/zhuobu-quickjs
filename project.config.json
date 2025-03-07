@@ -8,6 +8,10 @@
         "type": "folder"
       },
       {
+        "value": "miniaudio",
+        "type": "folder"
+      },
+      {
         "value": "glfw-3.4",
         "type": "folder"
       },

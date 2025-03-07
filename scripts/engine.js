@@ -1,6 +1,7 @@
+import { DialogRenderer } from "./component/DialogRenderer.js";
 import { SpriteRenderer } from "./component/SpriteRenderer.js";
 import { TextRenderer } from "./component/TextRenderer.js";
-import { clear, clearColor, createShaderProgram, getKey, getScreenHeight, getScreenWidth, getTime, getUniformLocation, initContext, loadAudio, loadImage, loadText, mat4, playAudio, pollEvents, resize, shouldCloseWindow, stopAudio, ink, swapBuffers, terminate, uniformMatrix4fv, useProgram, vec2 } from "./libs.js";
+import { clear, clearColor, createShaderProgram, getKey, getScreenHeight, getScreenWidth, getTime, getUniformLocation, initContext, loadAudio, loadImage, loadText, mat4, playAudio, pollEvents, resize, shouldCloseWindow, stopAudio, swapBuffers, terminate, uniformMatrix4fv, useProgram, vec2 } from "./libs.js";
 import { cTileSize, FPS, zoom } from "./misc/constants.js";
 import { KeyCode, KeyCodeGLFW, KeyInput, ObjectType } from "./misc/enums.js";
 import { buildAtlas, addAtlas as loadAtlasImages, loadAtlasShaderSource } from "./object/atlas.js";
@@ -11,7 +12,6 @@ import { MovingPlatform } from "./object/MovingPlatform.js";
 import { Slopes } from "./object/Slopes.js";
 
 
-let storySource = "";
 /** @type {string}*/
 let fontSource;
 /** @type {string}*/
@@ -76,7 +76,7 @@ export function getProgram(name) {
 
 
 export async function load() {
-    storySource = await loadText("resources/story/story.txt");
+    dialogRenderer.initStory(await loadText("resources/story/story.txt"));
     vertexShaderSource = await loadText("resources/glsl/sprite.vert.sk");
     fragmentShaderSource = await loadText("resources/glsl/sprite.frag.sk");
     textVertexShaderSource = await loadText("resources/glsl/text.vert.sk");
@@ -98,12 +98,10 @@ const map = new GameMap();
 
 const atlasRenderer = new SpriteRenderer();
 const textRenderer = new TextRenderer();
+const dialogRenderer = new DialogRenderer();
 export function init() {
     initContext();
     playAudio(0, 1, true);
-    const compiler = new ink.Compiler(storySource);
-    const story = compiler.Compile();
-    console.log(story.Continue());
     const atlas = buildAtlas();
     atlasRenderer.setAtlas(atlas);
     atlasRenderer.initQuad(0, 0, atlas.atlasSize, atlas.atlasSize);
@@ -116,6 +114,12 @@ export function init() {
     textRenderer.initImageTexture(imageFont);
     textRenderer.setFont(JSON.parse(fontSource));
     textRenderer.initText();
+    {
+        dialogRenderer.initImageTexture(imageFont);
+        dialogRenderer.setFont(JSON.parse(fontSource));
+        dialogRenderer.initText();
+        dialogRenderer.updateText();
+    }
     {
         const program = createShaderProgram(vertexShaderSource, fragmentShaderSource);
         addProgramCache("sprite", program);
@@ -177,6 +181,7 @@ export function fixedUpdate() {
             audioOn = true;
         }
     }
+    dialogRenderer.updateSelection(inputs, prevInputs);
     const objs = mMovingPlatforms.concat([character]).concat(mObjects);
     for (const obj of objs) {
         switch (obj.mType) {
@@ -268,6 +273,9 @@ export function render(alpha) {
     {
         textRenderer.render();
     }
+    {
+        dialogRenderer.render();
+    }
 }
 /**
  * 
@@ -334,6 +342,11 @@ function update() {
         inputs.add(KeyInput.ScaleNormal);
     } else {
         inputs.delete(KeyInput.ScaleNormal)
+    }
+    if (getKey(keys.UpKey)) {
+        inputs.add(KeyInput.Up);
+    } else {
+        inputs.delete(KeyInput.Up)
     }
 }
 export async function mainQuickjs() {
