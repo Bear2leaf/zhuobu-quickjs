@@ -6,6 +6,7 @@ import { cTileSize, FPS, zoom } from "./misc/constants.js";
 import { KeyCode, KeyCodeGLFW, KeyInput, ObjectType } from "./misc/enums.js";
 import { buildAtlas, addAtlas as loadAtlasImages, loadAtlasShaderSource } from "./object/atlas.js";
 import { Character } from "./object/Character.js";
+import { CollisionData } from "./object/CollisionData.js";
 import { Map as GameMap } from "./object/Map.js";
 import { MovingObject } from "./object/MovingObject.js";
 import { MovingPlatform } from "./object/MovingPlatform.js";
@@ -204,7 +205,26 @@ export function fixedUpdate() {
     const collisions = character.mAllCollidingObjects;
     textRenderer.message = `Collisions: ${collisions.length}\n${collectCollisions()}`;
     textRenderer.updateText();
+    toggleCharacterIconVisibility(collisions);
 }
+/**
+ *  @param {CollisionData[]} collisions
+ **/
+function toggleCharacterIconVisibility(collisions) {
+    if (collisions.length !== 0) {
+        if (character instanceof Character) {
+            character.mIconSpriteRenderer.visible = true;
+            if (character.mInputs.has(KeyInput.Action) && !character.mPrevInputs.has(KeyInput.Action)) {
+                dialogRenderer.visible = !dialogRenderer.visible
+            }
+        }
+    } else {
+        if (character instanceof Character) {
+            character.mIconSpriteRenderer.visible = false;
+        }
+    }
+}
+
 function collectCollisions() {
     const collisions = character.mAllCollidingObjects;
     /** @type {Record<string, number>} */
@@ -215,11 +235,6 @@ function collectCollisions() {
             info[type] = 0;
         }
         info[type]++;
-    }
-    if (collisions.length !== 0) {
-        dialogRenderer.visible = true;
-    } else {
-        dialogRenderer.visible = false
     }
     return Object.keys(info).map((key) => `${key}: ${info[key]}`).join("\n");
 }
@@ -271,6 +286,10 @@ export function render(alpha) {
         mat4.scale(m, m, [obj.scale[0], obj.scale[1], 1]);
         uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, m);
         obj.mSpriteRenderer.render();
+        if (obj instanceof Character) {
+            obj.mIconSpriteRenderer.render();
+        }
+        obj.mSpriteRenderer.render();
     }
     {
         mat4.identity(m);
@@ -278,12 +297,8 @@ export function render(alpha) {
         uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, m);
         atlasRenderer.render();
     }
-    {
-        textRenderer.render();
-    }
-    if (dialogRenderer.visible) {
-        dialogRenderer.render();
-    }
+    textRenderer.render();
+    dialogRenderer.render();
 }
 /**
  * 
@@ -297,7 +312,7 @@ function clampViewOffset(viewOffset) {
     const x = Math.min(mapRight, Math.max(mapLeft, viewOffset[0]));
     const y = Math.min(mapBottom, Math.max(mapTop, viewOffset[1]));
     viewOffset[0] = x;
-    // viewOffset[1] = y;
+    viewOffset[1] = y;
 
 }
 /**
@@ -305,7 +320,10 @@ function clampViewOffset(viewOffset) {
  */
 let keys;
 function update() {
-
+    prevInputs.clear();
+    for (const input of inputs) {
+        prevInputs.add(input);
+    }
     if (getKey(keys.RightKey)) {
         inputs.add(KeyInput.GoRight)
     } else {
@@ -355,6 +373,16 @@ function update() {
         inputs.add(KeyInput.Up);
     } else {
         inputs.delete(KeyInput.Up)
+    }
+    if (getKey(keys.XKey)) {
+        inputs.add(KeyInput.Action);
+    } else {
+        inputs.delete(KeyInput.Action)
+    }
+    if (getKey(keys.CKey)) {
+        inputs.add(KeyInput.Confirm);
+    } else {
+        inputs.delete(KeyInput.Confirm)
     }
 }
 export async function mainQuickjs() {

@@ -15,6 +15,8 @@ export const KeyInput = Object.freeze({
     ScaleNormal: 7,
     EnableAudio: 8,
     Up: 9,
+    Action: 10,
+    Confirm: 11,
 });
 export const KeyCode = Object.freeze({
 
@@ -28,6 +30,8 @@ export const KeyCode = Object.freeze({
     M: 77,
     N: 78,
     Backspace: 8,
+    XKey: 88,
+    CKey: 67,
 })
 
 export const KeyCodeGLFW = Object.freeze({
@@ -41,6 +45,8 @@ export const KeyCodeGLFW = Object.freeze({
     M: 77,
     N: 78,
     Backspace: 259,
+    XKey: 88,
+    CKey: 67,
 })
 export const ObjectType = Object.freeze({
     None: 0,

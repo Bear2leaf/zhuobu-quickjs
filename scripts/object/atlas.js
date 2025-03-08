@@ -74,6 +74,7 @@ export async function addAtlas() {
         "atlas/platform/movingPlatform",
         "atlas/platform/block",
         "atlas/platform/character",
+        "atlas/icon/question",
     ]);
     for (const name of urls) {
         imageCache.set(name, { ...await loadImage(`resources/${name}.png`), name });
@@ -150,7 +151,7 @@ export function buildAtlas() {
     const program = createShaderProgram(vert, frag);
     const dest = { x: 0, y: 0, width: 0, height: 0 };
     const padding = 1;
-    const atlasSize = 128;
+    const atlasSize = 256;
     const color = vec4.fromValues(1, 1, 1, 1);
     useProgram(program);
     bindVAO(vao);

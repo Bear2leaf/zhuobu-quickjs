@@ -27,6 +27,7 @@ export class TextRenderer {
         this.program = "text"
         this.status = "init";
         this.message = "Hello World";
+        this.height = 0;
     }
     /**
      * 
@@ -40,7 +41,7 @@ export class TextRenderer {
             bindTexture(tex);
             updateTexture(img);
             /** @type {[number, number, number]} */
-            this.unitRange = [img.width , img.height , 0];
+            this.unitRange = [img.width, img.height, 0];
             this.textures.push(tex);
         }
     }
@@ -94,7 +95,7 @@ export class TextRenderer {
         if (!vboTexcoords) {
             throw new Error("VBO not initialized");
         }
-        const mtsdfText = cacheMTSDFText([this.status, this.message].join("\n"), font, 24, "left", Infinity);
+        const mtsdfText = cacheMTSDFText([this.status, this.message].join("\n"), font, 12, "left", Infinity);
         const positions = mtsdfText.buffers.position;
         const texcoords = mtsdfText.buffers.uv;
         const indices = mtsdfText.buffers.index;
@@ -105,6 +106,7 @@ export class TextRenderer {
         bufferData(texcoords);
         bindEBO(ebo);
         bufferDataElement(indices);
+        this.height = mtsdfText.height;
         this.count = indices.length;
     }
     render() {
@@ -118,7 +120,7 @@ export class TextRenderer {
         useProgram(getProgram(program));
         bindVAO(vao);
         uniformMatrix4fv(getUniformLocationCached(program, "u_projection"), false, mat4.ortho(m, 0, getScreenWidth(), getScreenHeight(), 0, -1, 1));
-        uniformMatrix4fv(getUniformLocationCached(program, "u_modelView"), false, mat4.multiply(m, mat4.identity(m), mat4.fromTranslation(m, [0, 0, 0])));
+        uniformMatrix4fv(getUniformLocationCached(program, "u_modelView"), false, mat4.multiply(m, mat4.identity(m), mat4.fromTranslation(m, [0, (getScreenHeight() - this.height) / window.devicePixelRatio, 0])));
         uniform3f(getUniformLocationCached(program, "u_unitRange"), ...unitRange);
         uniform4f(getUniformLocationCached(program, "u_color"), 0, 0, 0, 1);
         for (let index = 0; index < textures.length; index++) {

@@ -14,6 +14,7 @@ export class SpriteRenderer {
         this.maxFrames = 1;
         this.frames = 0;
         this.count = 6;
+        this.visible = true;
     }
     /**
      * 
@@ -169,6 +170,64 @@ export class SpriteRenderer {
         setVertexAttributePointer(2, 2, false, 8, 6);
         enableVertexAttribute(2);
     }
+    initIcon() {
+        this.visible = false;
+        this.vao = createVAO();
+        this.vbo = createBuffer();
+        this.ebo = createBuffer();
+        const { vao, vbo, ebo, program, textures, atlas } = this;
+        if (!atlas) {
+            throw new Error("Atlas not initialized");
+        }
+
+        const rect = atlas.atlasData["atlas/icon/question"];
+        const maxFrames = this.maxFrames = Math.floor(rect.width / (rect.width));
+        const u0 = rect.x;
+        const v0 = rect.y;
+        const u1 = rect.x + rect.width / maxFrames;
+        const v1 = rect.y + rect.height;
+        /** @type {[number, number][]} */
+        const uv = [
+            [u1 / atlas.atlasSize, v1 / atlas.atlasSize],
+            [u1 / atlas.atlasSize, v0 / atlas.atlasSize],
+            [u0 / atlas.atlasSize, v0 / atlas.atlasSize],
+            [u0 / atlas.atlasSize, v1 / atlas.atlasSize]
+        ];
+        const buffer = new Float32Array(8 * 4 * maxFrames);
+        const indices = new Uint32Array(6 * maxFrames);
+        for (let i = 0; i < maxFrames; i++) {
+            buffer.set([
+                ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [-rect.width / 2, rect.height / 2 + cHalfSizeY * 2, 0.0], [0, cHalfSizeY * 2, 0], rect.rotated ? Math.PI / 2 : 0), [1, 1, 1]), 1.0, 1.0, 1.0, ...uv[0],
+                ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [-rect.width / 2, -rect.height / 2 + cHalfSizeY * 2, 0.0], [0, cHalfSizeY * 2, 0], rect.rotated ? Math.PI / 2 : 0), [1, 1, 1]), 1.0, 1.0, 1.0, ...uv[1],
+                ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [rect.width / 2, -rect.height / 2 + cHalfSizeY * 2, 0.0], [0, cHalfSizeY * 2, 0], rect.rotated ? Math.PI / 2 : 0), [1, 1, 1]), 1.0, 1.0, 1.0, ...uv[2],
+                ...vec3.mul(vec3.create(), vec3.rotateZ(vec3.create(), [rect.width / 2, rect.height / 2 + cHalfSizeY * 2, 0.0], [0, cHalfSizeY * 2, 0], rect.rotated ? Math.PI / 2 : 0), [1, 1, 1]), 1.0, 1.0, 1.0, ...uv[3],
+            ], i * 8 * 4);
+            vec2.add(uv[0], uv[0], [(cHalfSizeX * 2) / atlas.atlasSize, 0])
+            vec2.add(uv[1], uv[1], [(cHalfSizeX * 2) / atlas.atlasSize, 0])
+            vec2.add(uv[2], uv[2], [(cHalfSizeX * 2) / atlas.atlasSize, 0])
+            vec2.add(uv[3], uv[3], [(cHalfSizeX * 2) / atlas.atlasSize, 0])
+            indices.set([
+                i * 4 + 0,
+                i * 4 + 1,
+                i * 4 + 3,
+                i * 4 + 1,
+                i * 4 + 2,
+                i * 4 + 3
+            ], i * 6);
+        }
+        bindVAO(vao);
+        bindVBO(vbo);
+        bufferData(buffer);
+        bindEBO(ebo);
+        bufferDataElement(indices);
+        this.offset = Math.floor(Math.random() * maxFrames);
+        setVertexAttributePointer(0, 3, false, 8, 0);
+        enableVertexAttribute(0);
+        setVertexAttributePointer(1, 3, false, 8, 3);
+        enableVertexAttribute(1);
+        setVertexAttributePointer(2, 2, false, 8, 6);
+        enableVertexAttribute(2);
+    }
     /**
      * 
      * @param {GameMap} map 
@@ -247,6 +306,9 @@ export class SpriteRenderer {
 
     }
     render() {
+        if (!this.visible) {
+            return;
+        }
         const { vao, vbo, ebo, program, textures } = this;
         if (!vao) {
             throw new Error("VAO not initialized");

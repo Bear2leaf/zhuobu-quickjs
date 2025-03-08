@@ -117,7 +117,7 @@ export class DialogRenderer {
     updateSelection(inputs, prevInputs) {
         const next = inputs.has(KeyInput.GoDown) && !prevInputs.has(KeyInput.GoDown);
         const prev = inputs.has(KeyInput.Up) && !prevInputs.has(KeyInput.Up);
-        const confirm = inputs.has(KeyInput.Jump) && !prevInputs.has(KeyInput.Jump);
+        const confirm = inputs.has(KeyInput.Confirm) && !prevInputs.has(KeyInput.Confirm);
         if (next) {
             this.selection++;
             if (this.selection >= this.choices.length) {
@@ -216,6 +216,9 @@ export class DialogRenderer {
         bufferDataElement(indices);
     }
     render() {
+        if (!this.visible) {
+            return
+        }
         const { vao, program, textures, unitRange } = this;
         if (!vao) {
             throw new Error("VAO not initialized");

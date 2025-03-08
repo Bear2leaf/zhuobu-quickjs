@@ -1,5 +1,6 @@
 import { Animator } from "../component/Animator.js";
 import { AudioSource } from "../component/AudioSource.js";
+import { SpriteRenderer } from "../component/SpriteRenderer.js";
 import { vec2 } from "../libs.js";
 import { cGrabLedgeEndY, cGrabLedgeStartY, cGrabLedgeTileOffsetY, cGravity, cHalfSizeX, cHalfSizeY, cJumpFramesThreshold, cJumpSpeed, cMaxFallingSpeed, cMinJumpSpeed, cSlopeWallHeight, cTileSize, cWalkSfxTime, cWalkSpeed } from "../misc/constants.js";
 import { CharacterState, KeyInput } from "../misc/enums.js";
@@ -17,6 +18,7 @@ export class Character extends MovingObject {
         super(map);
         this.mInputs = inputs;
         this.mPrevInputs = prevInputs;
+        this.mIconSpriteRenderer = new SpriteRenderer();;
         /**
          * @type {EnumValue<typeof CharacterState>}
          */
@@ -243,7 +245,6 @@ export class Character extends MovingObject {
             this.mFramesFromJumpStart = 0;
         if ((!this.mPS.pushedBottom && this.mPS.pushesBottom))
             this.mAudioSource.playOneShot(this.mHitWallSfx, 0.5);
-        this.updatePrevInputs();
     }
     init() {
         this.scale = vec2.fromValues(1, 1);
@@ -254,23 +255,14 @@ export class Character extends MovingObject {
         this.mWalkSpeed = cWalkSpeed;
         this.mSlopeWallHeight = cSlopeWallHeight;
         this.mSpriteRenderer.initCharacter();
-    }
-
-    updatePrevInputs() {
-        this.mPrevInputs.clear();
-        for (const key of this.mInputs) {
-            this.mPrevInputs.add(key);
+        if (!this.mSpriteRenderer.atlas) {
+            throw new Error("Atlas not initialized");
         }
+        this.mIconSpriteRenderer.setAtlas(this.mSpriteRenderer.atlas);
+        this.mIconSpriteRenderer.initIcon();
     }
 
-    /**
-     * 
-     * @param {EnumValue<typeof KeyInput>} key 
-     * @returns {boolean}
-     */
-    released(key) {
-        return (!this.mInputs.has(key) && this.mPrevInputs.has(key));
-    }
+
     /**
      * 
      * @param {EnumValue<typeof KeyInput>} key 
@@ -278,13 +270,5 @@ export class Character extends MovingObject {
      */
     keyState(key) {
         return (this.mInputs.has(key));
-    }
-    /**
-     * 
-     * @param {EnumValue<typeof KeyInput>} key 
-     * @returns {boolean}
-     */
-    pressed(key) {
-        return (this.mInputs.has(key) && !this.mPrevInputs.has(key));
     }
 }
