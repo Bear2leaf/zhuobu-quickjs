@@ -4,17 +4,17 @@ import { cTileSize } from "../misc/constants.js";
 import { TileCollisionType } from "../misc/enums.js";
 import { CollisionData } from "./CollisionData.js";
 import { MovingObject } from "./MovingObject.js";
-const mw = 80;
+export const mw = 4;
 const mh = 50;
 const collisionsData = Object.freeze(new Array(mw * mh).fill(TileCollisionType.Empty).map((tile, index) => {
     // add border
-    if (index % mw === 0 || index % mw === mw - 1 || Math.floor(index / mw) === 0 || Math.floor(index / mw) === mh - 1) {
+    if (Math.floor(index / mw) === 0 || Math.floor(index / mw) === mh - 1) {
         return TileCollisionType.Full;
     }
     if (Math.floor(index / mw) < 5) {
         return TileCollisionType.Full;
-    } else if (Math.floor(index / mw) < 30) {
-        return Math.random() < 0.02 ? TileCollisionType.Full : Math.random() < 0.02 ? TileCollisionType.OneWaySlope45 : TileCollisionType.Empty;
+    } else if (Math.floor(index / mw) === 6 && (index % mw) === 0) {
+        return TileCollisionType.OneWaySlope45
     }
     return TileCollisionType.Empty;
 }));
@@ -24,8 +24,8 @@ export class Map {
         this.mPosition = vec3.create();
         this.mWidth = mw;
         this.mHeight = mh;
-        this.mGridAreaWidth = 16;
-        this.mGridAreaHeight = 16;
+        this.mGridAreaWidth = cTileSize;
+        this.mGridAreaHeight = cTileSize;
         this.mHorizontalAreasCount = Math.ceil(this.mWidth / this.mGridAreaWidth);
         this.mVerticalAreasCount = Math.ceil(this.mHeight / this.mGridAreaHeight);
         /** @type {(MovingObject[])[]} */
@@ -126,7 +126,11 @@ export class Map {
      * @param {MovingObject} obj 
      */
     addObjectToArea(areaIndex, obj) {
-        const area = this.mObjectsInArea[areaIndex[1] * this.mHorizontalAreasCount + areaIndex[0]];
+        const x = (areaIndex[0] < 0 ? (this.mHorizontalAreasCount + (areaIndex[0] % this.mHorizontalAreasCount)) : areaIndex[0] >= this.mHorizontalAreasCount ? ((areaIndex[0]) % this.mHorizontalAreasCount) : areaIndex[0]);
+        const area = this.mObjectsInArea[areaIndex[1] * this.mHorizontalAreasCount + x];
+        if (area.indexOf(obj) !== -1) {
+            return;
+        }
         //save the index of the object in the area 
         obj.mAreas.push(areaIndex);
         obj.mIdsInAreas.push(area.length);
@@ -140,7 +144,8 @@ export class Map {
      * @param {MovingObject} obj 
      */
     removeObjectFromArea(areaIndex, objIndexInArea, obj) {
-        const area = this.mObjectsInArea[areaIndex[1] * this.mHorizontalAreasCount + areaIndex[0]];
+        const x = (areaIndex[0] < 0 ? (this.mHorizontalAreasCount + (areaIndex[0] % this.mHorizontalAreasCount)) : areaIndex[0] >= this.mHorizontalAreasCount ? ((areaIndex[0]) % this.mHorizontalAreasCount) : areaIndex[0]);
+        const area = this.mObjectsInArea[areaIndex[1] * this.mHorizontalAreasCount + x];
         //swap the last item with the one we are removing
         const tmp = area[area.length - 1];
         area[area.length - 1] = obj;
@@ -162,8 +167,15 @@ export class Map {
      * @returns {vec2}
      */
     getMapTileAtPoint(point) {
+        let x = Math.floor((point[0] - this.mPosition[0] + cTileSize / 2.0) / (cTileSize));
+
+        if (x < 0) {
+            x = this.mWidth + (x % this.mWidth);
+        } else if (x >= this.mWidth) {
+            x = x % this.mWidth;
+        }
         return [
-            Math.floor((point[0] - this.mPosition[0] + cTileSize / 2.0) / (cTileSize)),
+            x,
             Math.floor((point[1] - this.mPosition[1] + cTileSize / 2.0) / (cTileSize))
         ];
     }
@@ -182,7 +194,14 @@ export class Map {
      * @returns {number}
      */
     getMapTileXAtPoint(x) {
-        return Math.floor((x - this.mPosition[0] + cTileSize / 2.0) / (cTileSize));
+        x = Math.floor((x - this.mPosition[0] + cTileSize / 2.0) / (cTileSize));
+        if (x < 0) {
+            return this.mWidth + (x % this.mWidth);
+        } else if (x >= this.mWidth) {
+            return x % this.mWidth;
+        } else {
+            return x;
+        }
     }
 
     /**
@@ -202,8 +221,13 @@ export class Map {
      * @returns {boolean}
      */
     isObstacle(x, y) {
-        if (x < 0 || x >= this.mWidth || y < 0 || y >= this.mHeight) {
+        if (y < 0 || y >= this.mHeight) {
             return true;
+        }
+        if (x < 0) {
+            return this.mTilesCollision[y * this.mWidth + this.mWidth + (x % this.mWidth)] === TileCollisionType.Full;
+        } else if (x >= this.mWidth) {
+            return this.mTilesCollision[y * this.mWidth + (x % this.mWidth)] === TileCollisionType.Full;
         }
         return this.mTilesCollision[y * this.mWidth + x] === TileCollisionType.Full;
     }
@@ -214,10 +238,15 @@ export class Map {
      * @returns {EnumValue<TileCollisionType>}
      */
     getCollisionType(x, y) {
-        if (x <= -1 || x >= this.mWidth
-            || y <= -1 || y >= this.mHeight)
+        if (y <= -1 || y >= this.mHeight) {
             return TileCollisionType.Empty;
-        return this.mTilesCollision[y * this.mWidth + x];
+        } else if (x < 0) {
+            return this.mTilesCollision[y * this.mWidth + this.mWidth + (x % this.mWidth)];
+        } else if (x >= this.mWidth) {
+            return this.mTilesCollision[y * this.mWidth + (x % this.mWidth)];
+        } else {
+            return this.mTilesCollision[y * this.mWidth + x];
+        }
     }
 }
 

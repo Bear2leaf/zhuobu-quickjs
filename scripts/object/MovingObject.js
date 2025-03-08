@@ -1,6 +1,6 @@
 import { SpriteRenderer } from "../component/SpriteRenderer.js";
 import { getScreenHeight, vec2, vec3 } from "../libs.js";
-import { cTileSize } from "../misc/constants.js";
+import { cHalfSizeX, cTileSize } from "../misc/constants.js";
 import { ObjectType, TileCollisionType } from "../misc/enums.js";
 import { clamp, sign } from "../misc/math.js";
 import { AABB } from "./AABB.js";
@@ -325,10 +325,73 @@ export class MovingObject {
      */
     collidesWithTileTop(ref) {
         const topRightTile = this.mMap.getMapTileAtPoint(vec2.fromValues(ref.topRight[0] - 0.5, ref.topRight[1] + 0.5));
-        const bottomleftTile = this.mMap.getMapTileAtPoint(vec2.fromValues(ref.bottomLeft[0] + 0.5, ref.bottomLeft[1] + 0.5));
+        const bottomLeftTile = this.mMap.getMapTileAtPoint(vec2.fromValues(ref.bottomLeft[0] + 0.5, ref.bottomLeft[1] + 0.5));
         let freeDown = Infinity;
         let slopeX = -1;
-        for (let x = bottomleftTile[0]; x <= topRightTile[0]; ++x) {
+        const transistion = bottomLeftTile[0] === this.mMap.mWidth - 1 && topRightTile[0] === 0;
+        if (transistion) {
+            const x0 = bottomLeftTile[0];
+            const x1 = topRightTile[0];
+            const y = topRightTile[1];
+            {
+                const tileCollisionType = this.mMap.getCollisionType(x0, y);
+                if (Slopes.isOneWay(tileCollisionType)) {
+
+                } else {
+
+
+                    switch (tileCollisionType) {
+                        default://slope
+                            const tileCenter = this.mMap.getMapTilePosition(x0, y);
+                            const sf = Slopes.getOffset6p(tileCenter, ref.bottomLeft[0] + 0.5, ref.topRight[0] - 0.5, ref.bottomLeft[1] + 0.5, ref.topRight[1] + 0.5, tileCollisionType);
+                            sf.freeDown += 1;
+                            sf.collidingTop += 1;
+                            if (sf.freeDown < freeDown && sf.freeDown <= 0 && sf.freeDown == sf.collidingTop) {
+                                freeDown = sf.freeDown;
+                                slopeX = x0;
+                            }
+
+                            break;
+                        case TileCollisionType.Empty:
+                            break;
+                        case TileCollisionType.Full:
+                            ref.state.pushesTopTile = true;
+                            vec2.floor(ref.state.topTile, [x0, y]);
+                            return true;
+                    }
+                }
+            }
+            {
+                const tileCollisionType = this.mMap.getCollisionType(x0, y);
+                if (Slopes.isOneWay(tileCollisionType)) {
+
+                } else {
+
+
+                    switch (tileCollisionType) {
+                        default://slope
+                            const tileCenter = this.mMap.getMapTilePosition(x0, y);
+                            const sf = Slopes.getOffset6p(tileCenter, ref.bottomLeft[0] + 0.5, ref.topRight[0] - 0.5, ref.bottomLeft[1] + 0.5, ref.topRight[1] + 0.5, tileCollisionType);
+                            sf.freeDown += 1;
+                            sf.collidingTop += 1;
+                            if (sf.freeDown < freeDown && sf.freeDown <= 0 && sf.freeDown == sf.collidingTop) {
+                                freeDown = sf.freeDown;
+                                slopeX = x0;
+                            }
+
+                            break;
+                        case TileCollisionType.Empty:
+                            break;
+                        case TileCollisionType.Full:
+                            ref.state.pushesTopTile = true;
+                            vec2.floor(ref.state.topTile, [x0, y]);
+                            return true;
+                    }
+                }
+            }
+        }
+
+        for (let x = bottomLeftTile[0]; x <= topRightTile[0]; ++x) {
             const tileCollisionType = this.mMap.getCollisionType(x, topRightTile[1]);
             if (Slopes.isOneWay(tileCollisionType))
                 continue;
@@ -376,14 +439,98 @@ export class MovingObject {
      */
     collidesWithTileBottom(ref) {
         const topRightTile = this.mMap.getMapTileAtPoint(vec2.fromValues(ref.topRight[0] - 0.5, ref.topRight[1] - 0.5));
-        const bottomleftTile = this.mMap.getMapTileAtPoint(vec2.fromValues(ref.bottomLeft[0] + 0.5, ref.bottomLeft[1] - 0.5));
+        const bottomLeftTile = this.mMap.getMapTileAtPoint(vec2.fromValues(ref.bottomLeft[0] + 0.5, ref.bottomLeft[1] - 0.5));
+        const bottomRightTile = this.mMap.getMapTileAtPoint(vec2.fromValues(ref.topRight[0] - 0.5, ref.bottomLeft[1] - 0.5));
         let collidingBottom = -Infinity;
         let slopeX = -1;
         let wasOneWay = false;
         let isOneWay;
-        for (let x = bottomleftTile[0]; x <= topRightTile[0]; ++x) {
+        const transistion = bottomLeftTile[0] === this.mMap.mWidth - 1 && topRightTile[0] === 0;
+        if (transistion) {
+            const x0 = bottomLeftTile[0];
+            const x1 = topRightTile[0];
+            const y = bottomLeftTile[1];
+            {
+                const tileCollisionType = this.mMap.getCollisionType(x0, y);
+                isOneWay = Slopes.isOneWay(tileCollisionType);
+                if ((this.mIgnoresOneWay || ref.state.tmpIgnoresOneWay) && isOneWay) {
 
-            const tileCollisionType = this.mMap.getCollisionType(x, bottomleftTile[1]);
+                } else {
+                    switch (tileCollisionType) {
+                        default://slope
+
+                            const tileCenter = this.mMap.getMapTilePosition(x0, y);
+                            let bottomLeftX = ref.bottomLeft[0] + 0.5;
+                            let topRightX = ref.topRight[0] - 0.5;
+                            const sf = Slopes.getOffset6p(tileCenter, bottomLeftX + 0.5, topRightX - 0.5, ref.bottomLeft[1] - 0.5, ref.topRight[1] - 0.5, tileCollisionType);
+
+                            sf.freeUp -= 1;
+                            sf.collidingBottom -= 1;
+
+                            if (((sf.freeUp >= 0 && sf.collidingBottom == sf.freeUp)
+                                || (ref.state.tmpSticksToSlope && ref.state.pushedBottom && sf.freeUp - sf.collidingBottom < this.mSlopeWallHeight && sf.freeUp >= sf.collidingBottom))
+                                && sf.collidingBottom >= collidingBottom
+                                && !(isOneWay && Math.abs(sf.collidingBottom) >= this.mSlopeWallHeight)) {
+                                wasOneWay = isOneWay;
+                                collidingBottom = sf.collidingBottom;
+                                slopeX = x0;
+                            }
+
+                            break;
+                        case TileCollisionType.Empty:
+                            break;
+                        case TileCollisionType.Full:
+                            ref.state.onOneWay = false;
+                            ref.state.pushesBottomTile = true;
+                            vec2.floor(ref.state.bottomTile, [x0, y]);
+                            ref.state.tmpIgnoresOneWay = false;
+                            return true;
+                    }
+                }
+            }
+            {
+                const tileCollisionType = this.mMap.getCollisionType(x1, y);
+                isOneWay = Slopes.isOneWay(tileCollisionType);
+                if ((this.mIgnoresOneWay || ref.state.tmpIgnoresOneWay) && isOneWay) {
+
+                } else {
+                    switch (tileCollisionType) {
+                        default://slope
+
+                            const tileCenter = this.mMap.getMapTilePosition(x1, y);
+                            let bottomLeftX = ref.bottomLeft[0] + 0.5;
+                            let topRightX = ref.topRight[0] - 0.5;
+
+                            const sf = Slopes.getOffset6p(tileCenter, bottomLeftX, topRightX, ref.bottomLeft[1] - 0.5, ref.topRight[1] - 0.5, tileCollisionType);
+                            sf.freeUp -= 1;
+                            sf.collidingBottom -= 1;
+                            if (((sf.freeUp >= 0 && sf.collidingBottom == sf.freeUp)
+                                || (ref.state.tmpSticksToSlope && ref.state.pushedBottom && sf.freeUp - sf.collidingBottom < this.mSlopeWallHeight && sf.freeUp >= sf.collidingBottom))
+                                && sf.collidingBottom >= collidingBottom
+                                && !(isOneWay && Math.abs(sf.collidingBottom) >= this.mSlopeWallHeight)) {
+                                wasOneWay = isOneWay;
+                                collidingBottom = sf.collidingBottom;
+                                slopeX = x1;
+                            }
+
+                            break;
+                        case TileCollisionType.Empty:
+                            break;
+                        case TileCollisionType.Full:
+                            ref.state.onOneWay = false;
+                            ref.state.pushesBottomTile = true;
+                            vec2.floor(ref.state.bottomTile, [x1, y]);
+                            ref.state.tmpIgnoresOneWay = false;
+                            return true;
+                    }
+                }
+
+            }
+
+        }
+        for (let x = bottomLeftTile[0]; x <= topRightTile[0]; ++x) {
+
+            const tileCollisionType = this.mMap.getCollisionType(x, bottomLeftTile[1]);
 
 
             isOneWay = Slopes.isOneWay(tileCollisionType);
@@ -393,7 +540,7 @@ export class MovingObject {
             switch (tileCollisionType) {
                 default://slope
 
-                    const tileCenter = this.mMap.getMapTilePosition(x, bottomleftTile[1]);
+                    const tileCenter = this.mMap.getMapTilePosition(x, bottomLeftTile[1]);
 
                     const sf = Slopes.getOffset6p(tileCenter, ref.bottomLeft[0] + 0.5, ref.topRight[0] - 0.5, ref.bottomLeft[1] - 0.5, ref.topRight[1] - 0.5, tileCollisionType);
                     sf.freeUp -= 1;
@@ -414,7 +561,7 @@ export class MovingObject {
                 case TileCollisionType.Full:
                     ref.state.onOneWay = false;
                     ref.state.pushesBottomTile = true;
-                    vec2.floor(ref.state.bottomTile, [x, bottomleftTile[1]]);
+                    vec2.floor(ref.state.bottomTile, [x, bottomLeftTile[1]]);
                     ref.state.tmpIgnoresOneWay = false;
                     return true;
             }
@@ -422,9 +569,9 @@ export class MovingObject {
         if (slopeX != -1 && (ref.state.tmpSticksToSlope || collidingBottom >= 0)) {
             if (ref.state.tmpSticksToSlope) {
                 ref.state.onOneWay = wasOneWay;
-                ref.state.oneWayY = bottomleftTile[1];
+                ref.state.oneWayY = bottomLeftTile[1];
                 ref.state.pushesBottomTile = true;
-                vec2.floor(ref.state.bottomTile, [slopeX, bottomleftTile[1]]);
+                vec2.floor(ref.state.bottomTile, [slopeX, bottomLeftTile[1]]);
             }
             ref.position[1] += collidingBottom;
             ref.topRight[1] += collidingBottom;

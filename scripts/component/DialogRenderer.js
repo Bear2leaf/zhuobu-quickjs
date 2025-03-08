@@ -49,6 +49,7 @@ export class DialogRenderer {
         this.compiler = new ink.Compiler("");
         this.count = 0;
         this.selection = -1;
+        this.visible = false;
     }
     /**
      * 

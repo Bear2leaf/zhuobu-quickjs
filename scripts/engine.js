@@ -130,36 +130,36 @@ export function init() {
         character.mSpriteRenderer.setAtlas(atlas);
         character.init();
         character.mType = ObjectType.Player;
-        character.mPosition[0] = 100;
+        character.mPosition[0] = 0;
         character.mPosition[1] = 200;
     }
-    {
-        const o = new Character(map);
-        o.mSpriteRenderer.setAtlas(atlas);
-        o.init();
-        o.mType = ObjectType.NPC;
-        o.mPosition[0] = 300;
-        o.mPosition[1] = 100;
-        mObjects.push(o);
-    }
-    {
-        const o = new Character(map);
-        o.mSpriteRenderer.setAtlas(atlas);
-        o.init();
-        o.mType = ObjectType.NPC;
-        o.mPosition[0] = 100;
-        o.mPosition[1] = 200;
-        mObjects.push(o);
-    }
-    {
-        const o = new MovingPlatform(map);
-        o.mSpriteRenderer.setAtlas(atlas);
-        o.init();
-        o.mType = ObjectType.MovingPlatform;
-        o.mPosition[0] = 450;
-        o.mPosition[1] = 200;
-        mMovingPlatforms.push(o);
-    }
+    // {
+    //     const o = new Character(map);
+    //     o.mSpriteRenderer.setAtlas(atlas);
+    //     o.init();
+    //     o.mType = ObjectType.NPC;
+    //     o.mPosition[0] = 300;
+    //     o.mPosition[1] = 100;
+    //     mObjects.push(o);
+    // }
+    // {
+    //     const o = new Character(map);
+    //     o.mSpriteRenderer.setAtlas(atlas);
+    //     o.init();
+    //     o.mType = ObjectType.NPC;
+    //     o.mPosition[0] = 100;
+    //     o.mPosition[1] = 200;
+    //     mObjects.push(o);
+    // }
+    // {
+    //     const o = new MovingPlatform(map);
+    //     o.mSpriteRenderer.setAtlas(atlas);
+    //     o.init();
+    //     o.mType = ObjectType.MovingPlatform;
+    //     o.mPosition[0] = 150;
+    //     o.mPosition[1] = 200;
+    //     mMovingPlatforms.push(o);
+    // }
     map.spriteRenderer.setAtlas(atlas);
     map.spriteRenderer.initMap(map);
 
@@ -216,6 +216,11 @@ function collectCollisions() {
         }
         info[type]++;
     }
+    if (collisions.length !== 0) {
+        dialogRenderer.visible = true;
+    } else {
+        dialogRenderer.visible = false
+    }
     return Object.keys(info).map((key) => `${key}: ${info[key]}`).join("\n");
 }
 const viewOffset = vec2.fromValues(0, 0);
@@ -237,10 +242,13 @@ export function render(alpha) {
     mat4.identity(m)
     mat4.scale(m, m, [zoom, zoom, 1]);
     uniformMatrix4fv(getUniformLocationCached(program, "u_world"), false, m);
-
-    mat4.identity(m);
-    uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, m);
-    map.spriteRenderer.render();
+    const currentX = Math.floor(character.position[0] / (map.mWidth * cTileSize));
+    for (let i = currentX - 2; i < currentX + 3; ++i) {
+        mat4.identity(m);
+        mat4.translate(m, m, [i * map.mWidth * cTileSize, 0, 0]);
+        uniformMatrix4fv(getUniformLocationCached(program, "u_model"), false, m);
+        map.spriteRenderer.render();
+    }
 
     for (let i = 0; i < mMovingPlatforms.length; ++i) {
         const obj = mMovingPlatforms[i];
@@ -273,7 +281,7 @@ export function render(alpha) {
     {
         textRenderer.render();
     }
-    {
+    if (dialogRenderer.visible) {
         dialogRenderer.render();
     }
 }
@@ -286,10 +294,10 @@ function clampViewOffset(viewOffset) {
     const mapLeft = (getScreenWidth() - cTileSize) / 2;
     const mapRight = map.mWidth * cTileSize - (getScreenWidth() + cTileSize) / 2;
     const mapBottom = map.mHeight * cTileSize - (getScreenHeight() + cTileSize) / 2;
-    const x = Math.min(mapRight, Math.max(mapLeft, viewOffset[0]));
+    // const x = Math.min(mapRight, Math.max(mapLeft, viewOffset[0]));
     const y = Math.min(mapBottom, Math.max(mapTop, viewOffset[1]));
-    viewOffset[0] = x;
-    viewOffset[1] = y;
+    // viewOffset[0] = x;
+    // viewOffset[1] = y;
 
 }
 /**

@@ -1,6 +1,7 @@
 import { cTileSize } from "../misc/constants.js";
 import { TileCollisionType } from "../misc/enums.js";
 import { clamp } from "../misc/math.js";
+import { mw } from "./Map.js";
 import { SlopeOffsetI } from "./SlopeOffsetI.js";
 import { SlopeOffsetSB } from "./SlopeOffsetSB.js";
 
@@ -100,6 +101,11 @@ export const Slopes = {
      * @returns {SlopeOffsetSB}
      */
     getOffset5p(slopeExtended, posX, posY, w, h) {
+        if (posX < 0) {
+            posX = mw * cTileSize + (posX % (mw * cTileSize));
+        } else if (posX >= mw * cTileSize) {
+            posX = (posX) % (mw * cTileSize);
+        }
         const len = Math.sqrt(slopeExtended.length);
         let freeUp = 0, freeDown = 0, collidingTop = 0, collidingBottom = 0;
         let freeLeft = 0, freeRight = 0, collidingLeft = 0, collidingRight = 0;
@@ -219,9 +225,14 @@ export const Slopes = {
      * @returns {SlopeOffsetSB}
     */
     getOffset6p(tileCenter, leftX, rightX, bottomY, topY, tileCollisionType) {
-
+        if (leftX < 0) {
+            leftX = mw * cTileSize + (leftX % (mw * cTileSize));
+            rightX = mw * cTileSize + (rightX % (mw * cTileSize));
+        } else if (leftX >= mw * cTileSize) {
+            leftX = (leftX) % (mw * cTileSize);
+            rightX = (rightX) % (mw * cTileSize);
+        }
         let posX, posY, sizeX, sizeY;
-
         const leftTileEdge = tileCenter[0] - cTileSize / 2;
         const rightTileEdge = leftTileEdge + cTileSize;
         const bottomTileEdge = tileCenter[1] - cTileSize / 2;
@@ -346,6 +357,11 @@ export const Slopes = {
      * @returns {number}
      */
     getSlopeHeightFromBottom(x, type) {
+        if (x < 0) {
+            x = mw * cTileSize + (x % (mw * cTileSize));
+        } else if (x >= mw * cTileSize) {
+            x = (x) % (mw * cTileSize);
+        }
         switch (type) {
             case TileCollisionType.Empty:
                 return 0;

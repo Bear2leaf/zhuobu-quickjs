@@ -218,7 +218,19 @@ export class Character extends MovingObject {
                 break;
             case CharacterState.GrabLedge:
                 this.mAnimator.play("GrabLedge");
-                const ledgeOnLeft = this.mLedgeTile[0] * cTileSize < this.mPosition[0];
+                let left = this.mPosition[0];
+                if (left < 0) {
+                    left = this.mMap.mWidth * cTileSize + (left % (this.mMap.mWidth * cTileSize));
+                } else if (left >= this.mMap.mWidth * cTileSize) {
+                    left = left % (this.mMap.mWidth * cTileSize);
+                }
+                let ledgeLeft = this.mLedgeTile[0];
+                if (ledgeLeft < 0) {
+                    ledgeLeft = this.mMap.mWidth + ledgeLeft;
+                } else if (ledgeLeft >= this.mMap.mWidth) {
+                    ledgeLeft = ledgeLeft % this.mMap.mWidth;
+                }
+                const ledgeOnLeft = ledgeLeft * cTileSize < left;
                 const ledgeOnRight = !ledgeOnLeft;
                 if (this.keyState(KeyInput.GoDown)
                     || (this.keyState(KeyInput.GoLeft) && ledgeOnRight)
@@ -233,7 +245,7 @@ export class Character extends MovingObject {
                     this.mAudioSource.playOneShot(this.mJumpSfx, 1.0);
                     this.mCurrentState = CharacterState.Jump;
                 }
-                if (!this.mMap.isObstacle(this.mLedgeTile[0], this.mLedgeTile[1])) {
+                if (!this.mMap.isObstacle(ledgeLeft, this.mLedgeTile[1])) {
                     this.mCurrentState = CharacterState.Jump;
                 }
                 break;
