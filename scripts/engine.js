@@ -203,7 +203,7 @@ export function fixedUpdate() {
         element.tickPosition();
     }
     const collisions = character.mAllCollidingObjects;
-    textRenderer.message = `Collisions: ${collisions.length}\n${collectCollisions()}`;
+    textRenderer.message = `${collectCollisions()}\nCollisions: ${collisions.length}\nMuted: ${!audioOn}, DialogOn: ${dialogRenderer.visible}`;
     textRenderer.updateText();
     toggleCharacterIconVisibility(collisions);
 }

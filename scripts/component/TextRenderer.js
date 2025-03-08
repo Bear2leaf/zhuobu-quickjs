@@ -95,7 +95,7 @@ export class TextRenderer {
         if (!vboTexcoords) {
             throw new Error("VBO not initialized");
         }
-        const mtsdfText = cacheMTSDFText([this.status, this.message].join("\n"), font, 12, "left", Infinity);
+        const mtsdfText = cacheMTSDFText([this.message, this.status].join("\n"), font, 12, "left", Infinity);
         const positions = mtsdfText.buffers.position;
         const texcoords = mtsdfText.buffers.uv;
         const indices = mtsdfText.buffers.index;
